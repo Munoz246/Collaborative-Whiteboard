@@ -1,14 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset='utf-8'>
-    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-    <title>Page Title</title>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
-    <script src='main.js'></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Collaborative Whiteboard</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <h1>Hello, world</h1>
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="index.html" class="back-link">Dashboard</a>
+      <h1 id="boardTitle">Whiteboard Workspace</h1>
+      <div class="user-pill">Demo User</div>
+    </header>
+
+    <main class="workspace-layout">
+      <!-- LEFT SIDEBAR -->
+      <aside class="left-sidebar">
+        <section class="panel sidebar-section boards-section">
+          <div class="panel-header">
+            <h2>Joined Whiteboards</h2>
+            <button id="newBoardBtn">+</button>
+          </div>
+          <ul id="joinedBoardsList" class="board-list"></ul>
+        </section>
+
+        <section class="panel sidebar-section chat-section">
+          <div class="panel-header">
+            <h2>Group Chat</h2>
+          </div>
+          <ul id="chatList" class="chat-list"></ul>
+          <div class="input-row">
+            <input id="chatInput" type="text" placeholder="Type a message..." />
+            <button id="sendChatBtn">Send</button>
+          </div>
+        </section>
+      </aside>
+
+      <!-- CENTER WHITEBOARD -->
+      <section class="center-board panel">
+        <div class="panel-header">
+          <h2>Whiteboard</h2>
+          <div class="toolbar">
+            <button id="clearCanvasBtn">Clear</button>
+          </div>
+        </div>
+        <canvas id="whiteboardCanvas" width="1000" height="650"></canvas>
+      </section>
+
+      <!-- RIGHT SIDEBAR -->
+      <aside class="right-sidebar">
+        <section class="panel ai-section">
+          <div class="panel-header">
+            <h2>AI Chatbot</h2>
+          </div>
+
+          <input
+            id="apiKeyInput"
+            type="password"
+            placeholder="Enter your OpenAI API key"
+          />
+
+          <div id="aiMessages" class="ai-messages">
+            <div class="ai-message bot">
+              Hello! Ask me anything about this board.
+            </div>
+          </div>
+
+          <textarea
+            id="aiPromptInput"
+            rows="5"
+            placeholder="Ask the AI assistant..."
+          ></textarea>
+
+          <button id="askAiBtn">Send</button>
+        </section>
+      </aside>
+    </main>
+  </div>
 </body>
 </html>
