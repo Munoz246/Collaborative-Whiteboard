@@ -9,6 +9,11 @@ body {
   color: #1f2937;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 .app-shell {
   min-height: 100vh;
   display: flex;
@@ -98,6 +103,72 @@ body {
   gap: 8px;
 }
 
+/* Whiteboard-only page layout */
+.whiteboard-only-layout {
+  flex: 1;
+  display: flex;
+  padding: 16px;
+  min-height: calc(100vh - 64px);
+}
+
+.whiteboard-only-layout .center-board {
+  flex: 1;
+}
+
+.canvas-wrap {
+  flex: 1;
+  min-height: 600px;
+  display: flex;
+}
+
+/* Toolbar buttons (whiteboard) */
+.tool-button {
+  background: #f3f4f6;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.tool-button:hover {
+  background: #e5e7eb;
+}
+
+.tool-button.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.whiteboard-toolbar {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.shape-subtoolbar {
+  display: none;
+  gap: 8px;
+  align-items: center;
+}
+
+/* A button-like link for the dashboard -> whiteboard navigation */
+.link-button {
+  display: inline-block;
+  text-decoration: none;
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  background: #1d4ed8;
+}
+
 canvas {
   width: 100%;
   height: 100%;
@@ -106,6 +177,70 @@ canvas {
   border-radius: 10px;
   background: white;
   cursor: crosshair;
+}
+
+/* Dedicated infinite whiteboard layout (full-viewport) */
+.whiteboard-root {
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.whiteboard-toolbar-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #111827;
+  color: white;
+}
+
+.whiteboard-back-link {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.whiteboard-title {
+  font-size: 1.05rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.whiteboard-clear {
+  margin-left: auto;
+}
+
+.whiteboard-canvas-host {
+  flex: 1;
+  min-height: 0;
+  background: white;
+  position: relative;
+  display: flex;
+}
+
+.whiteboard-canvas-host canvas {
+  border: none;
+  border-radius: 0;
+  /* Fabric uses multiple stacked canvases (upper/lower). Keep the upper
+   * canvas transparent so lower-canvas drawings remain visible. */
+  background: transparent !important;
+  cursor: crosshair;
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+}
+
+/* Extra specificity: Fabric's canvases are tagged with classes. */
+.whiteboard-canvas-host .upper-canvas,
+.whiteboard-canvas-host .lower-canvas {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .board-list,
