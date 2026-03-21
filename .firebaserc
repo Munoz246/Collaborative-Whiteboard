@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "collaborative-whiteboard-c486"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }
