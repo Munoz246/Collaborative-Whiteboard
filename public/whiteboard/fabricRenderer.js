@@ -46,14 +46,26 @@ export class FabricRenderer {
     /** @type {Map<string, fabric.Object>} */
     this.fabricById = new Map();
 
-    // Keep state management synchronized when users transform objects.
-    this.canvas.on("object:modified", (evt) => {
+    this._onObjectModified = (evt) => {
       const obj = evt.target;
       if (!obj) return;
       const elementId = obj.__elementId;
       if (!elementId) return;
       this.syncElementFromFabricObject(elementId);
-    });
+    };
+
+    // Keep state management synchronized when users transform objects.
+    this.canvas.on("object:modified", this._onObjectModified);
+  }
+
+  /** Detach Fabric listeners before canvas.dispose() (see WhiteboardModule.destroy). */
+  destroy() {
+    if (this.canvas && this._onObjectModified) {
+      this.canvas.off("object:modified", this._onObjectModified);
+    }
+    this.fabricById.clear();
+    this.canvas = null;
+    this.store = null;
   }
 
   getFabricObject(elementId) {
