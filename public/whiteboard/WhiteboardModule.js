@@ -1,3 +1,10 @@
+/**
+ * Whiteboard facade: owns the Fabric canvas, data store, renderer, and interaction layer.
+ *
+ * WhiteboardModule is constructed from integration/index.js (or any host that passes a canvas
+ * element and optional UI button refs). init() builds ElementStore + FabricRenderer +
+ * InteractionController, keeps the canvas sized to the viewport, and starts listening for input.
+ */
 import { ElementStore } from "./elementStore.js";
 import { FabricRenderer } from "./fabricRenderer.js";
 import { InteractionController } from "./interactionController.js";
@@ -9,6 +16,9 @@ export class WhiteboardModule {
    * @param {object} [config.ui]
    */
   constructor({ canvasEl, ui = {} }) {
+    // =============================================================================
+    // Construction — hold refs; real work happens in init() after Fabric is available
+    // =============================================================================
     this.canvasEl = canvasEl;
     this.ui = ui;
 
@@ -23,6 +33,9 @@ export class WhiteboardModule {
   }
 
   init() {
+    // =============================================================================
+    // Fabric canvas + subsystems — single place that wires store ↔ renderer ↔ input
+    // =============================================================================
     const fabric = globalThis.fabric;
     if (!fabric || !fabric.Canvas) {
       throw new Error(
@@ -51,6 +64,9 @@ export class WhiteboardModule {
   }
 
   resize() {
+    // =============================================================================
+    // Viewport sizing — match window; preserve zoom/pan so resize does not reset the view
+    // =============================================================================
     if (!this.canvas || !this.canvasEl) return;
 
     const prevVpt = this.canvas.viewportTransform ? [...this.canvas.viewportTransform] : [1, 0, 0, 1, 0, 0];
@@ -75,6 +91,9 @@ export class WhiteboardModule {
   }
 
   destroy() {
+    // =============================================================================
+    // Teardown — remove listeners first, then dispose Fabric (order avoids stray callbacks)
+    // =============================================================================
     if (!this.isInitialized) return;
 
     this.resizeObserver?.disconnect();

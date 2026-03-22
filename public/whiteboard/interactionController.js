@@ -1,3 +1,10 @@
+/**
+ * Turns user input (mouse, keyboard, toolbar) into updates on the canvas and ElementStore.
+ *
+ * WhiteboardModule constructs this after FabricRenderer exists. The controller calls
+ * store/renderer methods to create shapes, paths, and text; it also manages zoom, pan,
+ * and custom drag-box selection because Fabric’s defaults are adjusted per active tool.
+ */
 export class InteractionController {
   /**
    * @param {fabric.Canvas} canvas
@@ -6,6 +13,9 @@ export class InteractionController {
    * @param {any} ui
    */
   constructor(canvas, store, renderer, ui) {
+    // =============================================================================
+    // Mutable state — tool mode, gestures in progress, zoom limits, listener guards
+    // =============================================================================
     this.canvas = canvas;
     this.store = store;
     this.renderer = renderer;
@@ -55,6 +65,10 @@ export class InteractionController {
     this._onUiShapeCircle = () => this.setShapeKind("circle");
     this._onUiClearCanvas = () => this.clearAll();
   }
+
+  // =============================================================================
+  // init / destroy — register DOM + Fabric listeners once (guarded by _initialized)
+  // =============================================================================
 
   init() {
     if (this._initialized) {
@@ -127,6 +141,10 @@ export class InteractionController {
     this._initialized = false;
   }
 
+  // =============================================================================
+  // Toolbar a11y, context menu, keyboard — aria-pressed; RMB pan; Space pan; Delete
+  // =============================================================================
+
   /**
    * @param {HTMLElement | null | undefined} el
    * @param {boolean} pressed
@@ -182,6 +200,10 @@ export class InteractionController {
       this.isSpaceHeld = false;
     }
   }
+
+  // =============================================================================
+  // Toolbar + tool mode — sync HTML controls with Fabric (selectable vs drawing modes)
+  // =============================================================================
 
   setShapeKind(kind) {
     this.activeShapeKind = kind;
@@ -279,6 +301,10 @@ export class InteractionController {
     return true;
   }
 
+  // =============================================================================
+  // Wheel zoom — scale around cursor; skip while editing inline text on the canvas
+  // =============================================================================
+
   onWheel(opt) {
     // Ignore wheel when editing text.
     const active = this.canvas.getActiveObject();
@@ -305,10 +331,16 @@ export class InteractionController {
     e.stopPropagation();
   }
 
+  // =============================================================================
+  // Pointer routing — dispatch to pan, selection box, or active draw tool
+  // =============================================================================
+
   onMouseDown(opt) {
     const e = opt.e;
     if (!e) return;
 
+    // Normalize which mouse button fired: Fabric and browsers disagree on `button` vs `which`,
+    // so we prefer the `buttons` bitmask when present, then fall back for older quirks.
     const which = e.which ?? null; // 1 left, 2 middle, 3 right (typical)
     const button = opt.button ?? e.button;
     const buttonsMask = typeof e.buttons === "number" ? e.buttons : 0; // 1 left, 2 right, 4 middle
@@ -389,6 +421,7 @@ export class InteractionController {
     const e = opt.e;
     if (!e) return;
 
+    // Same button detection strategy as onMouseDown (keep pan / drag-release behavior consistent).
     const which = e.which ?? null;
     const button = opt.button ?? e.button;
     const buttonsMask = typeof e.buttons === "number" ? e.buttons : 0;
@@ -423,6 +456,10 @@ export class InteractionController {
       this.finishPath();
     }
   }
+
+  // =============================================================================
+  // Drag-box selection — custom marquee in select mode; builds ActiveSelection when needed
+  // =============================================================================
 
   beginAreaSelection(pointer) {
     const fabric = globalThis.fabric;
@@ -529,6 +566,10 @@ export class InteractionController {
     this.canvas.requestRenderAll();
   }
 
+  // =============================================================================
+  // Pan — right-drag or Space + left-drag; adjusts viewportTransform, not object positions
+  // =============================================================================
+
   beginPan(e) {
     this.isPanning = true;
     this.panStartClient = { x: e.clientX, y: e.clientY };
@@ -572,6 +613,10 @@ export class InteractionController {
     this.canvas.defaultCursor = "default";
     this.canvas.requestRenderAll();
   }
+
+  // =============================================================================
+  // Shape tool — live rectangle/circle while dragging; tiny drags are discarded on release
+  // =============================================================================
 
   beginShape(pointer) {
     this.isDrawingShape = true;
@@ -653,6 +698,10 @@ export class InteractionController {
     this.shapeElementId = null;
     this.canvas.requestRenderAll();
   }
+
+  // =============================================================================
+  // Pen tool — freehand polyline in world space; points stored relative to stroke bbox
+  // =============================================================================
 
   beginPath(pointer) {
     this.isDrawingPath = true;
@@ -750,6 +799,10 @@ export class InteractionController {
     this.pathPointsAbs = [];
     this.canvas.requestRenderAll();
   }
+
+  // =============================================================================
+  // Polyline + text helpers — refresh Fabric geometry; place editable Textbox from tool
+  // =============================================================================
 
   /**
    * Fabric polyline can keep stale internal dimensions after points mutation.

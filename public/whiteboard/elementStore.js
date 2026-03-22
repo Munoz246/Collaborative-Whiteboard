@@ -1,3 +1,15 @@
+/**
+ * In-memory model for everything drawn on the whiteboard (shapes, text, pen paths).
+ *
+ * FabricRenderer and InteractionController read/write this store; it is the single source of
+ * truth for positions, sizes, and styles. serialize() / applySerialized() use a simple JSON
+ * shape so a future server can save and reload boards without changing the rest of the app.
+ */
+
+// =============================================================================
+// Small helpers — ids and shallow merges used when patching nested fields
+// =============================================================================
+
 function safeRandomUUID() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   // Fallback: not cryptographically secure, but sufficient for local-only uniqueness.
@@ -24,6 +36,10 @@ export class ElementStore {
   createId() {
     return safeRandomUUID();
   }
+
+  // =============================================================================
+  // CRUD — add, read, patch, delete elements by stable id
+  // =============================================================================
 
   /**
    * Add an element. If `element.id` is missing, one is generated.
@@ -88,6 +104,10 @@ export class ElementStore {
     return Array.from(this.elementsById.values());
   }
 
+  // =============================================================================
+  // Persistence shape — versioned payload for network or localStorage later
+  // =============================================================================
+
   /**
    * Backend-friendly serialization (future-proofing).
    */
@@ -113,4 +133,3 @@ export class ElementStore {
     }
   }
 }
-

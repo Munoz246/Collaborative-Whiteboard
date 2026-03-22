@@ -1,3 +1,14 @@
+/**
+ * Bridges ElementStore and Fabric.js: creates, updates, and removes canvas objects.
+ *
+ * Each store element gets a matching Fabric object tracked in fabricById. When the user drags
+ * or resizes on the canvas, object:modified syncs back into the store so logic stays data-driven.
+ */
+
+// =============================================================================
+// Geometry helpers — pen paths use raw points; we derive width/height for scaling
+// =============================================================================
+
 function pointsToPlain(points) {
   return (points || []).map((p) => ({ x: p.x, y: p.y }));
 }
@@ -22,6 +33,10 @@ function computePolylineIntrinsicSize(points) {
   return { w, h };
 }
 
+// =============================================================================
+// Fabric UI — consistent resize/rotate handles across Rect, Circle, Textbox, Polyline
+// =============================================================================
+
 function setCommonControls(obj) {
   obj.set({
     hasControls: true,
@@ -41,6 +56,9 @@ export class FabricRenderer {
    * @param {any} store
    */
   constructor(canvas, store) {
+    // =============================================================================
+    // Lifecycle — listen for transforms so the store stays in sync with the canvas
+    // =============================================================================
     this.canvas = canvas;
     this.store = store;
     /** @type {Map<string, fabric.Object>} */
@@ -71,6 +89,10 @@ export class FabricRenderer {
   getFabricObject(elementId) {
     return this.fabricById.get(elementId);
   }
+
+  // =============================================================================
+  // Canvas graph — add/remove/clear; used when tools create elements or clear the board
+  // =============================================================================
 
   /**
    * Create + add a new Fabric object for a store element.
@@ -108,6 +130,10 @@ export class FabricRenderer {
     }
     this.canvas.requestRenderAll();
   }
+
+  // =============================================================================
+  // Factory — map one store element to the right Fabric class (rectangle, circle, text, path)
+  // =============================================================================
 
   /**
    * @param {any} element
@@ -188,6 +214,10 @@ export class FabricRenderer {
     return obj;
   }
 
+  // =============================================================================
+  // Store sync — after drag/resize, write Fabric’s geometry back into ElementStore
+  // =============================================================================
+
   /**
    * Update the store element to match the current Fabric object transform.
    */
@@ -261,4 +291,3 @@ export class FabricRenderer {
     });
   }
 }
-

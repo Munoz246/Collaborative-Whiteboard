@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!--
+  Collaborative whiteboard — single-page workspace.
+
+  A full-screen Fabric.js canvas sits under a fixed HUD (toolbar, chat, file list, etc.).
+  whiteboard/integration/index.js looks up elements by id (e.g. whiteboardCanvas, toolSelectBtn);
+  overlay panels use ids that match OverlayManager keys and data-overlay-target attributes.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -13,11 +20,14 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Section: app root — canvas layer (z-index 0) + pointer-friendly HUD (see styles.css) -->
   <main class="integrated-app">
+    <!-- Full-viewport drawing surface; InteractionController attaches Fabric here -->
     <div class="whiteboard-layer" aria-hidden="true">
       <canvas id="whiteboardCanvas"></canvas>
     </div>
 
+    <!-- HUD: toolbar dock + floating panels; BaseOverlayPanel toggles is-open / aria-hidden per section id -->
     <div class="overlay-layer hud-root" role="application" aria-label="Whiteboard workspace">
       <!-- Top-left: back + title -->
       <div class="hud-cluster hud-cluster--left overlay-item">
@@ -120,7 +130,7 @@
         </div>
       </section>
 
-      <!-- Panels: corners -->
+      <!-- Section: slide-in panels — each id is registered in integration/index.js OverlayManager -->
       <section
         id="boardNavigationOverlay"
         class="overlay-panel hud-panel hud-panel--top-left is-closed overlay-item"
@@ -215,6 +225,7 @@
     </div>
   </main>
 
+  <!-- Load order: Bootstrap (optional helpers), Fabric (globalThis.fabric), then our module bootstrap -->
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
