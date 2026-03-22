@@ -1,3 +1,10 @@
+/**
+ * Wires global HUD buttons to overlay panels using data attributes.
+ *
+ * Buttons with data-overlay-target="boards" toggle the panel registered under key "boards".
+ * data-overlay-close hides a specific panel. Handlers are tracked so destroy() can remove them
+ * cleanly if the app ever needs to tear down the UI.
+ */
 export class OverlayManager {
   /**
    * @param {Record<string, { mount: Function, setOpen: Function, isOpen: Function }>} modules
@@ -6,6 +13,10 @@ export class OverlayManager {
     this.modules = modules;
     this.toggles = [];
   }
+
+  // =============================================================================
+  // Mount — initialize each panel, then bind open/close buttons across the document
+  // =============================================================================
 
   mount() {
     for (const module of Object.values(this.modules)) {
@@ -35,6 +46,10 @@ export class OverlayManager {
       this.toggles.push({ btn, handler });
     }
   }
+
+  // =============================================================================
+  // Teardown — remove click listeners (mirrors pattern used elsewhere in the app)
+  // =============================================================================
 
   destroy() {
     for (const { btn, handler } of this.toggles) {

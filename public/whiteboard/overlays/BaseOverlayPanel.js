@@ -1,3 +1,9 @@
+/**
+ * Controls one overlay panel in the HUD (toolbar dock or floating sidebar).
+ *
+ * OverlayManager constructs several BaseOverlayPanel instances keyed by overlay name. Each panel
+ * wraps a DOM root (by id); setOpen toggles CSS classes and aria-hidden for accessibility.
+ */
 export class BaseOverlayPanel {
   /**
    * @param {string} rootId
@@ -9,6 +15,10 @@ export class BaseOverlayPanel {
     this.rootEl = null;
   }
 
+  // =============================================================================
+  // Mount — resolve the element from the page; apply initial open/closed state
+  // =============================================================================
+
   mount() {
     this.rootEl = document.getElementById(this.rootId);
     if (!this.rootEl) {
@@ -16,6 +26,10 @@ export class BaseOverlayPanel {
     }
     this.setOpen(this.defaultOpen);
   }
+
+  // =============================================================================
+  // Visibility — CSS classes drive layout; screen readers use aria-hidden
+  // =============================================================================
 
   setOpen(isOpen) {
     if (!this.rootEl) return;

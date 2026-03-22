@@ -1,6 +1,17 @@
+/**
+ * Integrated whiteboard entry point (loaded as a module from index.html).
+ *
+ * Finds the canvas and toolbar DOM nodes, constructs WhiteboardModule with those references,
+ * then wires OverlayManager so HUD buttons can open/close side panels. If anything fails
+ * during startup, the user sees an alert so missing markup is obvious.
+ */
 import { WhiteboardModule } from "../WhiteboardModule.js";
 import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
+
+// =============================================================================
+// Startup — connect DOM to whiteboard + overlays
+// =============================================================================
 
 function initIntegratedApp() {
   const canvasEl = document.getElementById("whiteboardCanvas");
@@ -22,6 +33,7 @@ function initIntegratedApp() {
 
   whiteboard.init();
 
+  // Each overlay is a panel root id from index.html; keys must match data-overlay-target values.
   const overlays = new OverlayManager({
     toolbar: new BaseOverlayPanel("whiteboardToolbarOverlay", true),
     boards: new BaseOverlayPanel("boardNavigationOverlay", false),
@@ -31,6 +43,10 @@ function initIntegratedApp() {
   });
   overlays.mount();
 }
+
+// =============================================================================
+// Load — run once; surface errors (e.g. wrong page or blocked script)
+// =============================================================================
 
 try {
   initIntegratedApp();
