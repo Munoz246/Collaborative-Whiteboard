@@ -5,7 +5,7 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f3f4f6;
+  background: #ffffff;
   color: #1f2937;
 }
 
@@ -14,235 +14,7 @@ body {
   height: 100%;
 }
 
-.app-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.topbar {
-  height: 64px;
-  background: #111827;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  gap: 16px;
-}
-
-.topbar h1 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.back-link {
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-.user-pill {
-  background: #374151;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 0.9rem;
-}
-
-.workspace-layout {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 280px 1fr 320px;
-  gap: 16px;
-  padding: 16px;
-  min-height: calc(100vh - 64px);
-}
-
-.left-sidebar,
-.right-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 0;
-}
-
-.left-sidebar {
-  display: grid;
-  grid-template-rows: 1fr 1.2fr;
-  gap: 16px;
-}
-
-.panel {
-  background: white;
-  border-radius: 14px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  padding: 16px;
-  min-height: 0;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-}
-
-.panel-header h2 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.center-board {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.toolbar {
-  display: flex;
-  gap: 8px;
-}
-
-/* Whiteboard-only page layout */
-.whiteboard-only-layout {
-  flex: 1;
-  display: flex;
-  padding: 16px;
-  min-height: calc(100vh - 64px);
-}
-
-.whiteboard-only-layout .center-board {
-  flex: 1;
-}
-
-.canvas-wrap {
-  flex: 1;
-  min-height: 600px;
-  display: flex;
-}
-
-/* Toolbar buttons (whiteboard) */
-.tool-button {
-  background: #f3f4f6;
-  color: #1f2937;
-  border: 1px solid #d1d5db;
-  padding: 8px 10px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.tool-button:hover {
-  background: #e5e7eb;
-}
-
-.tool-button.active {
-  background: #2563eb;
-  color: white;
-  border-color: #2563eb;
-}
-
-.whiteboard-toolbar {
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.shape-subtoolbar {
-  display: none;
-  gap: 8px;
-  align-items: center;
-}
-
-/* A button-like link for the dashboard -> whiteboard navigation */
-.link-button {
-  display: inline-block;
-  text-decoration: none;
-  border: none;
-  background: #2563eb;
-  color: white;
-  padding: 10px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.link-button:hover {
-  background: #1d4ed8;
-}
-
-canvas {
-  width: 100%;
-  height: 100%;
-  flex: 1;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  background: white;
-  cursor: crosshair;
-}
-
-/* Dedicated infinite whiteboard layout (full-viewport) */
-.whiteboard-root {
-  height: 100vh;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.whiteboard-toolbar-bar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: #111827;
-  color: white;
-}
-
-.whiteboard-back-link {
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-.whiteboard-title {
-  font-size: 1.05rem;
-  font-weight: bold;
-  white-space: nowrap;
-}
-
-.whiteboard-clear {
-  margin-left: auto;
-}
-
-.whiteboard-canvas-host {
-  flex: 1;
-  min-height: 0;
-  background: white;
-  position: relative;
-  display: flex;
-}
-
-.whiteboard-canvas-host canvas {
-  border: none;
-  border-radius: 0;
-  /* Fabric uses multiple stacked canvases (upper/lower). Keep the upper
-   * canvas transparent so lower-canvas drawings remain visible. */
-  background: transparent !important;
-  cursor: crosshair;
-  position: relative;
-  top: auto;
-  left: auto;
-  width: 100%;
-  height: 100%;
-  flex: 1 1 auto;
-}
-
-/* Extra specificity: Fabric's canvases are tagged with classes. */
-.whiteboard-canvas-host .upper-canvas,
-.whiteboard-canvas-host .lower-canvas {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-
+/* Shared panel lists (whiteboards nav, chat); HUD section overrides where needed */
 .board-list,
 .chat-list {
   list-style: none;
@@ -273,45 +45,6 @@ canvas {
   color: #1d4ed8;
 }
 
-.chat-section {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.chat-list {
-  flex: 1;
-  overflow-y: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 8px;
-  margin-bottom: 12px;
-  background: #f9fafb;
-}
-
-.chat-list li {
-  padding: 8px;
-  margin-bottom: 8px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-}
-
-.input-row {
-  display: flex;
-  gap: 8px;
-}
-
-.input-row input {
-  flex: 1;
-}
-
-.ai-section {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
 .ai-messages {
   flex: 1;
   min-height: 260px;
@@ -335,60 +68,468 @@ canvas {
   align-self: flex-start;
 }
 
-
-
-input,
-textarea,
-button {
-  font: inherit;
+/* Integrated index: full-viewport whiteboard + HUD overlays (glass / liquid style) */
+.integrated-app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
-input,
-textarea {
+.whiteboard-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #ffffff;
+}
+
+.whiteboard-layer canvas {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-}
-
-textarea {
-  resize: vertical;
-  margin-bottom: 12px;
-}
-
-button {
+  height: 100%;
   border: none;
-  background: #2563eb;
-  color: white;
-  padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 0;
+  background: transparent !important;
+}
+
+.whiteboard-layer .upper-canvas,
+.whiteboard-layer .lower-canvas {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.overlay-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.overlay-item {
+  pointer-events: auto;
+}
+
+/* ---- Liquid glass surfaces ---- */
+.hud-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  border-radius: 22px;
+}
+
+/* ---- Top HUD clusters ---- */
+.hud-cluster {
+  position: fixed;
+  top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1002;
+}
+
+.hud-cluster--left {
+  left: 20px;
+}
+
+.hud-cluster--center {
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
+}
+
+.hud-cluster--right {
+  right: 20px;
+}
+
+.hud-title-pill {
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  max-width: min(52vw, 420px);
+}
+
+.hud-title-text {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.hud-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(255, 255, 255, 0.85);
+  color: #111827;
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-button:hover {
-  background: #1d4ed8;
+.hud-icon-btn:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
 }
 
-@media (max-width: 1200px) {
-  .workspace-layout {
-    grid-template-columns: 240px 1fr 280px;
-  }
+.hud-icon-btn--round {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
 }
 
-@media (max-width: 950px) {
-  .workspace-layout {
-    grid-template-columns: 1fr;
+.hud-icon-btn--sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* ---- Bottom drawing toolbar (pill) ---- */
+.hud-toolbar-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1020;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.hud-toolbar-dock.is-closed {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(12px);
+}
+
+.hud-toolbar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 999px;
+}
+
+.hud-tool-btn {
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #111827;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.hud-tool-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.hud-tool-btn.active {
+  background: rgba(0, 0, 0, 0.88);
+  color: #ffffff;
+}
+
+.hud-tool-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.hud-tool-icon--text {
+  width: 20px;
+  height: 20px;
+}
+
+.hud-tool-btn--mini {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="rectangle"] {
+  border-radius: 6px;
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="circle"] {
+  border-radius: 50%;
+}
+
+.hud-tool-btn--danger {
+  margin-left: 4px;
+  color: #b91c1c;
+}
+
+.hud-tool-btn--danger:hover {
+  background: rgba(185, 28, 28, 0.1);
+}
+
+.hud-shape-subtoolbar {
+  display: none;
+  gap: 6px;
+  align-items: center;
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* ---- Floating panels ---- */
+.overlay-panel {
+  position: fixed;
+  z-index: 1005;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  max-width: calc(100vw - 40px);
+}
+
+.overlay-panel.is-open {
+  opacity: 1;
+}
+
+.overlay-panel.is-closed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hud-panel--top-left {
+  top: 88px;
+  left: 20px;
+  width: min(340px, calc(100vw - 40px));
+  max-height: calc(100vh - 200px);
+}
+
+.hud-panel--top-left.is-closed {
+  transform: translate(-10px, -8px);
+}
+
+.hud-panel--bottom-left {
+  left: 20px;
+  bottom: 100px;
+  width: min(380px, calc(100vw - 40px));
+  max-height: min(40vh, 340px);
+}
+
+.hud-panel--bottom-left.is-closed {
+  transform: translate(-10px, 10px);
+}
+
+.hud-panel--top-right {
+  top: 88px;
+  right: 20px;
+  width: min(360px, calc(100vw - 40px));
+  max-height: calc(100vh - 200px);
+}
+
+.hud-panel--top-right.is-closed {
+  transform: translate(10px, -8px);
+}
+
+.hud-panel--bottom-right {
+  right: 20px;
+  bottom: 100px;
+  width: min(340px, calc(100vw - 40px));
+  max-height: min(38vh, 320px);
+}
+
+.hud-panel--bottom-right.is-closed {
+  transform: translate(10px, 10px);
+}
+
+.hud-panel__surface {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+  overflow: hidden;
+}
+
+.hud-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.hud-panel__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.hud-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-panel-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+  color: #111827;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-panel-close:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.hud-panel__body {
+  padding: 12px 16px 16px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.hud-placeholder-row {
+  height: 12px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e5e7eb, #f3f4f6);
+  margin-bottom: 10px;
+}
+
+.hud-board-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.hud-chat-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  min-height: 80px;
+  overflow-y: auto;
+}
+
+.hud-chat-bubble {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.05);
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.hud-input {
+  border-radius: 14px !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.hud-input-group .hud-input {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.hud-send-btn {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 14px !important;
+  border-bottom-right-radius: 14px !important;
+}
+
+.hud-ai-messages {
+  min-height: 100px;
+  max-height: 200px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(249, 250, 251, 0.9);
+}
+
+.hud-file-list .hud-placeholder-row:last-child {
+  margin-bottom: 0;
+}
+
+/* Override legacy sidebar chat/board list styles inside HUD panels */
+.hud-board-list.board-list li.hud-placeholder-row {
+  border: none;
+  padding: 0;
+}
+
+.hud-chat-list.chat-list {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.hud-chat-list.chat-list li.hud-chat-bubble {
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.hud-ai-messages.ai-messages {
+  flex: none;
+  min-height: 100px;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .hud-cluster--center {
+    max-width: calc(100vw - 140px);
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
-  .left-sidebar {
-    grid-template-rows: auto auto;
+  .hud-title-pill {
+    max-width: 40vw;
   }
 
-  .center-board {
-    min-height: 500px;
+  .hud-panel--top-left,
+  .hud-panel--top-right {
+    top: 140px;
+    width: calc(100vw - 24px);
+    left: 12px;
+    right: auto;
   }
 
-  .right-sidebar {
-    min-height: 400px;
+  .hud-panel--top-right {
+    left: 12px;
+  }
+
+  .hud-panel--bottom-left,
+  .hud-panel--bottom-right {
+    bottom: 92px;
+    width: calc(100vw - 24px);
+    left: 12px;
+    right: auto;
+  }
+
+  .hud-panel--bottom-right {
+    left: 12px;
   }
 }

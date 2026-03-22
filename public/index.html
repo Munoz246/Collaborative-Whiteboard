@@ -4,80 +4,223 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Collaborative Whiteboard</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+    crossorigin="anonymous"
+  />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <a href="index.html" class="back-link">Dashboard</a>
-      <h1 id="boardTitle">Whiteboard Workspace</h1>
-      <div class="user-pill">Demo User</div>
-    </header>
+  <main class="integrated-app">
+    <div class="whiteboard-layer" aria-hidden="true">
+      <canvas id="whiteboardCanvas"></canvas>
+    </div>
 
-    <main class="workspace-layout">
-      <!-- LEFT SIDEBAR -->
-      <aside class="left-sidebar">
-        <section class="panel sidebar-section boards-section">
-          <div class="panel-header">
-            <h2>Joined Whiteboards</h2>
-            <button id="newBoardBtn">+</button>
-          </div>
-          <ul id="joinedBoardsList" class="board-list"></ul>
-        </section>
-
-        <section class="panel sidebar-section chat-section">
-          <div class="panel-header">
-            <h2>Group Chat</h2>
-          </div>
-          <ul id="chatList" class="chat-list"></ul>
-          <div class="input-row">
-            <input id="chatInput" type="text" placeholder="Type a message..." />
-            <button id="sendChatBtn">Send</button>
-          </div>
-        </section>
-      </aside>
-
-      <!-- CENTER WHITEBOARD -->
-      <section class="center-board panel">
-        <div class="panel-header">
-          <h2>Whiteboard</h2>
-          <div class="toolbar">
-            <a href="whiteboard.html" class="link-button">Open Infinite Whiteboard</a>
-            <button id="clearCanvasBtn">Clear</button>
-          </div>
+    <div class="overlay-layer hud-root" role="application" aria-label="Whiteboard workspace">
+      <!-- Top-left: back + title -->
+      <div class="hud-cluster hud-cluster--left overlay-item">
+        <a href="index.html" class="hud-icon-btn hud-icon-btn--round" title="Dashboard" aria-label="Back to dashboard">
+          <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </a>
+        <div class="hud-title-pill">
+          <h1 id="boardTitle" class="hud-title-text">Whiteboard Workspace</h1>
         </div>
-        <canvas id="whiteboardCanvas" width="1000" height="650"></canvas>
+      </div>
+
+      <!-- Top-center: quick actions -->
+      <div class="hud-cluster hud-cluster--center overlay-item" role="toolbar" aria-label="Quick panels">
+        <button type="button" class="hud-icon-btn hud-icon-btn--round" data-overlay-target="boards" title="Whiteboards" aria-label="Toggle whiteboards list">
+          <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+          </svg>
+        </button>
+        <button type="button" class="hud-icon-btn hud-icon-btn--round" data-overlay-target="groupChat" title="Group chat" aria-label="Toggle group chat">
+          <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </button>
+        <button type="button" class="hud-icon-btn hud-icon-btn--round" data-overlay-target="fileManager" title="Files" aria-label="Toggle file manager">
+          <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+        </button>
+        <button type="button" class="hud-icon-btn hud-icon-btn--round" data-overlay-target="aiChat" title="AI assistant" aria-label="Toggle AI chatbot">
+          <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+            <path d="M5 19h14" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Top-right: profile + settings (placeholders) -->
+      <div class="hud-cluster hud-cluster--right overlay-item">
+        <button type="button" class="hud-icon-btn hud-icon-btn--round" title="Profile" aria-label="Profile (coming soon)">
+          <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </button>
+        <button type="button" class="hud-icon-btn hud-icon-btn--round" title="Settings" aria-label="Settings (coming soon)">
+          <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Bottom-center: drawing tools -->
+      <section
+        id="whiteboardToolbarOverlay"
+        class="overlay-panel hud-toolbar-dock is-open overlay-item"
+        aria-hidden="false"
+        aria-label="Drawing tools"
+      >
+        <div class="hud-toolbar-pill hud-glass">
+          <button id="toolSelectBtn" class="hud-tool-btn active" type="button" data-tool="select" title="Select" aria-label="Select tool" aria-pressed="true">
+            <svg class="hud-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+            </svg>
+          </button>
+          <button id="toolShapeBtn" class="hud-tool-btn" type="button" data-tool="shape" title="Shapes" aria-label="Shape tool" aria-pressed="false">
+            <svg class="hud-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="3" y="3" width="8" height="8" rx="1" />
+              <circle cx="17" cy="17" r="5" />
+            </svg>
+          </button>
+          <button id="toolPenBtn" class="hud-tool-btn" type="button" data-tool="pen" title="Pen" aria-label="Pen tool" aria-pressed="false">
+            <svg class="hud-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M12 19l7-7 3 3-7 7-3-3z" />
+              <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+            </svg>
+          </button>
+          <button id="toolTextBtn" class="hud-tool-btn" type="button" data-tool="text" title="Text" aria-label="Text tool" aria-pressed="false">
+            <svg class="hud-tool-icon hud-tool-icon--text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M4 7V5h16v2M10 5v14M14 5v14M10 19h4" />
+            </svg>
+          </button>
+          <span class="hud-shape-subtoolbar shape-subtoolbar" id="shapeSubtoolbar">
+            <button id="shapeRectBtn" class="hud-tool-btn hud-tool-btn--mini shape-choice active" type="button" data-shape="rectangle" title="Rectangle" aria-label="Rectangle">
+              <span class="visually-hidden">Rectangle</span>
+            </button>
+            <button id="shapeCircleBtn" class="hud-tool-btn hud-tool-btn--mini shape-choice" type="button" data-shape="circle" title="Circle" aria-label="Circle">
+              <span class="visually-hidden">Circle</span>
+            </button>
+          </span>
+          <button id="clearCanvasBtn" class="hud-tool-btn hud-tool-btn--danger" type="button" title="Clear canvas" aria-label="Clear canvas">
+            <svg class="hud-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+            </svg>
+          </button>
+        </div>
       </section>
 
-      <!-- RIGHT SIDEBAR -->
-      <aside class="right-sidebar">
-        <section class="panel ai-section">
-          <div class="panel-header">
-            <h2>AI Chatbot</h2>
+      <!-- Panels: corners -->
+      <section
+        id="boardNavigationOverlay"
+        class="overlay-panel hud-panel hud-panel--top-left is-closed overlay-item"
+        aria-hidden="true"
+      >
+        <div class="hud-glass hud-panel__surface">
+          <header class="hud-panel__header">
+            <h2 class="hud-panel__title">Whiteboards</h2>
+            <div class="hud-panel__actions">
+              <button id="newBoardBtn" class="hud-icon-btn hud-icon-btn--sm" type="button" title="New board" aria-label="New board">+</button>
+              <button type="button" class="hud-panel-close" data-overlay-close="boards" aria-label="Close whiteboards panel">×</button>
+            </div>
+          </header>
+          <div class="hud-panel__body">
+            <ul id="joinedBoardsList" class="board-list hud-board-list mb-0">
+              <li class="hud-placeholder-row"></li>
+              <li class="hud-placeholder-row"></li>
+            </ul>
           </div>
+        </div>
+      </section>
 
-          <input
-            id="apiKeyInput"
-            type="password"
-            placeholder="Enter your OpenAI API key"
-          />
-
-          <div id="aiMessages" class="ai-messages">
-            <div class="ai-message bot">
-              Hello! Ask me anything about this board.
+      <section
+        id="groupChatOverlay"
+        class="overlay-panel hud-panel hud-panel--bottom-left is-closed overlay-item"
+        aria-hidden="true"
+      >
+        <div class="hud-glass hud-panel__surface">
+          <header class="hud-panel__header">
+            <h2 class="hud-panel__title">Group Chat</h2>
+            <button type="button" class="hud-panel-close" data-overlay-close="groupChat" aria-label="Close chat">×</button>
+          </header>
+          <div class="hud-panel__body d-flex flex-column gap-2">
+            <ul id="chatList" class="chat-list hud-chat-list mb-0">
+              <li class="hud-chat-bubble">Hi!</li>
+              <li class="hud-chat-bubble">Hello!</li>
+            </ul>
+            <div class="input-group hud-input-group">
+              <input id="chatInput" class="form-control hud-input" type="text" placeholder="Your message…" />
+              <button id="sendChatBtn" class="btn btn-dark hud-send-btn" type="button" aria-label="Send message">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
+                </svg>
+              </button>
             </div>
           </div>
+        </div>
+      </section>
 
-          <textarea
-            id="aiPromptInput"
-            rows="5"
-            placeholder="Ask the AI assistant..."
-          ></textarea>
+      <section
+        id="aiChatOverlay"
+        class="overlay-panel hud-panel hud-panel--top-right is-closed overlay-item"
+        aria-hidden="true"
+      >
+        <div class="hud-glass hud-panel__surface">
+          <header class="hud-panel__header">
+            <h2 class="hud-panel__title">AI Chatbot</h2>
+            <button type="button" class="hud-panel-close" data-overlay-close="aiChat" aria-label="Close AI chat">×</button>
+          </header>
+          <div class="hud-panel__body d-flex flex-column gap-2">
+            <input id="apiKeyInput" class="form-control hud-input" type="password" placeholder="API key (optional)" />
+            <div id="aiMessages" class="ai-messages hud-ai-messages">
+              <div class="ai-message bot hud-chat-bubble">Hello! How can I help you?</div>
+            </div>
+            <textarea id="aiPromptInput" rows="3" class="form-control hud-input" placeholder="Your prompt…"></textarea>
+            <button id="askAiBtn" class="btn btn-dark w-100 rounded-pill" type="button">Send</button>
+          </div>
+        </div>
+      </section>
 
-          <button id="askAiBtn">Send</button>
-        </section>
-      </aside>
-    </main>
-  </div>
+      <section
+        id="fileManagerOverlay"
+        class="overlay-panel hud-panel hud-panel--bottom-right is-closed overlay-item"
+        aria-hidden="true"
+      >
+        <div class="hud-glass hud-panel__surface">
+          <header class="hud-panel__header">
+            <h2 class="hud-panel__title">File Manager</h2>
+            <button type="button" class="hud-panel-close" data-overlay-close="fileManager" aria-label="Close file manager">×</button>
+          </header>
+          <div class="hud-panel__body">
+            <ul class="list-unstyled mb-0 hud-file-list">
+              <li class="hud-placeholder-row"></li>
+              <li class="hud-placeholder-row"></li>
+              <li class="hud-placeholder-row"></li>
+              <li class="hud-placeholder-row"></li>
+            </ul>
+            <p class="text-muted small mb-0 mt-2">Placeholder — attach files here later.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"
+  ></script>
+  <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+  <script type="module" src="./whiteboard/integration/index.js"></script>
 </body>
 </html>

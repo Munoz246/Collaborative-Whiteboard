@@ -34,66 +34,54 @@ export class InteractionController {
     this.minZoom = 0.2;
     this.maxZoom = 6;
 
+    /** Prevents duplicate listeners if init() is called more than once. */
+    this._initialized = false;
+
     this._onMouseDown = this.onMouseDown.bind(this);
     this._onMouseMove = this.onMouseMove.bind(this);
     this._onMouseUp = this.onMouseUp.bind(this);
     this._onWheel = this.onWheel.bind(this);
+    this._onCanvasContextMenu = this.onCanvasContextMenu.bind(this);
+    this._onDocumentContextMenu = this.onDocumentContextMenu.bind(this);
+    this._onKeyDown = this.onKeyDown.bind(this);
+    this._onKeyUp = this.onKeyUp.bind(this);
+
+    // Stable references so init()/destroy() can add/remove the same listeners.
+    this._onUiSelectTool = () => this.setTool("select");
+    this._onUiShapeTool = () => this.setTool("shape");
+    this._onUiPenTool = () => this.setTool("pen");
+    this._onUiTextTool = () => this.setTool("text");
+    this._onUiShapeRect = () => this.setShapeKind("rectangle");
+    this._onUiShapeCircle = () => this.setShapeKind("circle");
+    this._onUiClearCanvas = () => this.clearAll();
   }
 
   init() {
-    if (this.ui.toolSelectBtn)
-      this.ui.toolSelectBtn.addEventListener("click", () => {
-        this.setTool("select");
-      });
-    if (this.ui.toolShapeBtn)
-      this.ui.toolShapeBtn.addEventListener("click", () => {
-        this.setTool("shape");
-      });
-    if (this.ui.toolPenBtn)
-      this.ui.toolPenBtn.addEventListener("click", () => {
-        this.setTool("pen");
-      });
-    if (this.ui.toolTextBtn)
-      this.ui.toolTextBtn.addEventListener("click", () => {
-        this.setTool("text");
-      });
+    if (this._initialized) {
+      console.warn("InteractionController.init() called again; skipping duplicate listeners.");
+      return;
+    }
 
-    if (this.ui.shapeRectBtn)
-      this.ui.shapeRectBtn.addEventListener("click", () => {
-        this.setShapeKind("rectangle");
-      });
-    if (this.ui.shapeCircleBtn)
-      this.ui.shapeCircleBtn.addEventListener("click", () => {
-        this.setShapeKind("circle");
-      });
+    if (this.ui.toolSelectBtn) this.ui.toolSelectBtn.addEventListener("click", this._onUiSelectTool);
+    if (this.ui.toolShapeBtn) this.ui.toolShapeBtn.addEventListener("click", this._onUiShapeTool);
+    if (this.ui.toolPenBtn) this.ui.toolPenBtn.addEventListener("click", this._onUiPenTool);
+    if (this.ui.toolTextBtn) this.ui.toolTextBtn.addEventListener("click", this._onUiTextTool);
 
-    if (this.ui.clearCanvasBtn)
-      this.ui.clearCanvasBtn.addEventListener("click", () => {
-        this.clearAll();
-      });
+    if (this.ui.shapeRectBtn) this.ui.shapeRectBtn.addEventListener("click", this._onUiShapeRect);
+    if (this.ui.shapeCircleBtn) this.ui.shapeCircleBtn.addEventListener("click", this._onUiShapeCircle);
+
+    if (this.ui.clearCanvasBtn) this.ui.clearCanvasBtn.addEventListener("click", this._onUiClearCanvas);
 
     // Prevent context menu so RMB drag works smoothly.
     const canvasEl = this.canvas.getElement();
-    canvasEl.addEventListener(
-      "contextmenu",
-      (e) => {
-        e.preventDefault();
-      },
-      { passive: false },
-    );
+    canvasEl.addEventListener("contextmenu", this._onCanvasContextMenu, { passive: false });
 
     // Some browsers/Firebase embedding route contextmenu outside the canvas element.
     // Prevent it when it's on/inside our canvas.
-    document.addEventListener(
-      "contextmenu",
-      (e) => {
-        const target = e.target;
-        if (target && canvasEl && (target === canvasEl || canvasEl.contains(target))) {
-          e.preventDefault();
-        }
-      },
-      { passive: false, capture: true },
-    );
+    document.addEventListener("contextmenu", this._onDocumentContextMenu, {
+      passive: false,
+      capture: true,
+    });
 
     this.canvas.on("mouse:down", this._onMouseDown);
     this.canvas.on("mouse:move", this._onMouseMove);
@@ -101,52 +89,109 @@ export class InteractionController {
     this.canvas.on("mouse:wheel", this._onWheel);
 
     // Keyboard pan fallback: hold Space and drag with left mouse.
-    document.addEventListener("keydown", (e) => {
-      const activeObj = this.canvas.getActiveObject();
-      const editingFabricText = !!(activeObj && activeObj.isEditing);
-      const domTarget = e.target;
-      const editingDomInput =
-        domTarget instanceof HTMLElement &&
-        (domTarget.tagName === "INPUT" ||
-          domTarget.tagName === "TEXTAREA" ||
-          domTarget.isContentEditable);
-
-      if (e.code === "Space") {
-        // Do not hijack Space while text editing.
-        if (editingFabricText || editingDomInput) return;
-
-        this.isSpaceHeld = true;
-        e.preventDefault();
-        return;
-      }
-
-      if (e.code === "Delete" || e.code === "Backspace") {
-        // Let text input/backspace work naturally while editing.
-        if (editingFabricText || editingDomInput) return;
-
-        const deletedAny = this.deleteSelectedElements();
-        if (deletedAny) {
-          e.preventDefault();
-        }
-      }
-    });
-    document.addEventListener("keyup", (e) => {
-      if (e.code === "Space") {
-        this.isSpaceHeld = false;
-      }
-    });
+    document.addEventListener("keydown", this._onKeyDown);
+    document.addEventListener("keyup", this._onKeyUp);
 
     // Default tool.
     this.setTool("select");
+    this._initialized = true;
+  }
+
+  destroy() {
+    if (!this._initialized) return;
+
+    if (this.ui.toolSelectBtn) this.ui.toolSelectBtn.removeEventListener("click", this._onUiSelectTool);
+    if (this.ui.toolShapeBtn) this.ui.toolShapeBtn.removeEventListener("click", this._onUiShapeTool);
+    if (this.ui.toolPenBtn) this.ui.toolPenBtn.removeEventListener("click", this._onUiPenTool);
+    if (this.ui.toolTextBtn) this.ui.toolTextBtn.removeEventListener("click", this._onUiTextTool);
+
+    if (this.ui.shapeRectBtn) this.ui.shapeRectBtn.removeEventListener("click", this._onUiShapeRect);
+    if (this.ui.shapeCircleBtn) this.ui.shapeCircleBtn.removeEventListener("click", this._onUiShapeCircle);
+
+    if (this.ui.clearCanvasBtn) this.ui.clearCanvasBtn.removeEventListener("click", this._onUiClearCanvas);
+
+    const canvasEl = this.canvas.getElement();
+    if (canvasEl) {
+      canvasEl.removeEventListener("contextmenu", this._onCanvasContextMenu);
+    }
+
+    document.removeEventListener("contextmenu", this._onDocumentContextMenu, true);
+    document.removeEventListener("keydown", this._onKeyDown);
+    document.removeEventListener("keyup", this._onKeyUp);
+
+    this.canvas.off("mouse:down", this._onMouseDown);
+    this.canvas.off("mouse:move", this._onMouseMove);
+    this.canvas.off("mouse:up", this._onMouseUp);
+    this.canvas.off("mouse:wheel", this._onWheel);
+
+    this._initialized = false;
+  }
+
+  /**
+   * @param {HTMLElement | null | undefined} el
+   * @param {boolean} pressed
+   */
+  _setAriaPressed(el, pressed) {
+    if (el && typeof el.setAttribute === "function") {
+      el.setAttribute("aria-pressed", pressed ? "true" : "false");
+    }
+  }
+
+  onCanvasContextMenu(e) {
+    e.preventDefault();
+  }
+
+  onDocumentContextMenu(e) {
+    const canvasEl = this.canvas.getElement();
+    const target = e.target;
+    if (target && canvasEl && (target === canvasEl || canvasEl.contains(target))) {
+      e.preventDefault();
+    }
+  }
+
+  onKeyDown(e) {
+    const activeObj = this.canvas.getActiveObject();
+    const editingFabricText = !!(activeObj && activeObj.isEditing);
+    const domTarget = e.target;
+    const editingDomInput =
+      domTarget instanceof HTMLElement &&
+      (domTarget.tagName === "INPUT" || domTarget.tagName === "TEXTAREA" || domTarget.isContentEditable);
+
+    if (e.code === "Space") {
+      // Do not hijack Space while text editing.
+      if (editingFabricText || editingDomInput) return;
+
+      this.isSpaceHeld = true;
+      e.preventDefault();
+      return;
+    }
+
+    if (e.code === "Delete" || e.code === "Backspace") {
+      // Let text input/backspace work naturally while editing.
+      if (editingFabricText || editingDomInput) return;
+
+      const deletedAny = this.deleteSelectedElements();
+      if (deletedAny) {
+        e.preventDefault();
+      }
+    }
+  }
+
+  onKeyUp(e) {
+    if (e.code === "Space") {
+      this.isSpaceHeld = false;
+    }
   }
 
   setShapeKind(kind) {
     this.activeShapeKind = kind;
     if (this.ui.shapeRectBtn) {
       this.ui.shapeRectBtn.classList.toggle("active", kind === "rectangle");
+      this._setAriaPressed(this.ui.shapeRectBtn, kind === "rectangle");
     }
     if (this.ui.shapeCircleBtn) {
       this.ui.shapeCircleBtn.classList.toggle("active", kind === "circle");
+      this._setAriaPressed(this.ui.shapeCircleBtn, kind === "circle");
     }
   }
 
@@ -163,14 +208,26 @@ export class InteractionController {
 
     this.renderer.setAllSelectable(selectable);
 
-    if (this.ui.toolSelectBtn) this.ui.toolSelectBtn.classList.toggle("active", tool === "select");
-    if (this.ui.toolShapeBtn) this.ui.toolShapeBtn.classList.toggle("active", tool === "shape");
-    if (this.ui.toolPenBtn) this.ui.toolPenBtn.classList.toggle("active", tool === "pen");
-    if (this.ui.toolTextBtn) this.ui.toolTextBtn.classList.toggle("active", tool === "text");
+    if (this.ui.toolSelectBtn) {
+      this.ui.toolSelectBtn.classList.toggle("active", tool === "select");
+      this._setAriaPressed(this.ui.toolSelectBtn, tool === "select");
+    }
+    if (this.ui.toolShapeBtn) {
+      this.ui.toolShapeBtn.classList.toggle("active", tool === "shape");
+      this._setAriaPressed(this.ui.toolShapeBtn, tool === "shape");
+    }
+    if (this.ui.toolPenBtn) {
+      this.ui.toolPenBtn.classList.toggle("active", tool === "pen");
+      this._setAriaPressed(this.ui.toolPenBtn, tool === "pen");
+    }
+    if (this.ui.toolTextBtn) {
+      this.ui.toolTextBtn.classList.toggle("active", tool === "text");
+      this._setAriaPressed(this.ui.toolTextBtn, tool === "text");
+    }
 
-    if (this.ui.shapeRectBtn && this.ui.shapeCircleBtn) {
-      const shapeSubtoolbar = document.getElementById("shapeSubtoolbar");
-      if (shapeSubtoolbar) shapeSubtoolbar.style.display = tool === "shape" ? "inline-flex" : "none";
+    const shapeSubtoolbar = this.ui.shapeSubtoolbarEl;
+    if (shapeSubtoolbar && this.ui.shapeRectBtn && this.ui.shapeCircleBtn) {
+      shapeSubtoolbar.style.display = tool === "shape" ? "inline-flex" : "none";
     }
 
     this.canvas.discardActiveObject();
