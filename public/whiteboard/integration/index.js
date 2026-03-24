@@ -4,10 +4,14 @@
  * Finds the canvas and toolbar DOM nodes, constructs WhiteboardModule with those references,
  * then wires OverlayManager so HUD buttons can open/close side panels. If anything fails
  * during startup, the user sees an alert so missing markup is obvious.
+ *
+ * Auth is handled by mountAuthUI() in auth.js — the app only initializes once
+ * Firebase confirms a signed-in user.
  */
 import { WhiteboardModule } from "../WhiteboardModule.js";
 import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
+import { mountAuthUI } from "../auth.js";
 
 // =============================================================================
 // Startup — connect DOM to whiteboard + overlays
@@ -45,11 +49,11 @@ function initIntegratedApp() {
 }
 
 // =============================================================================
-// Load — run once; surface errors (e.g. wrong page or blocked script)
+// Startup — mount auth UI; app init runs once sign-in is confirmed
 // =============================================================================
 
 try {
-  initIntegratedApp();
+  mountAuthUI({ onSignedIn: initIntegratedApp });
 } catch (err) {
   console.error(err);
   alert("Failed to initialize integrated whiteboard: " + err.message);
