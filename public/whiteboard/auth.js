@@ -8,16 +8,9 @@
  * with a callback that receives the signed-in user and initializes the app.
  */
 
-window.firebase.initializeApp({
-  apiKey:            "AIzaSyDLfw_BLPm6pxTIYCKAPn66zy4GplL_5Dw",
-  authDomain:        "collaborative-whiteboard-c486.firebaseapp.com",
-  projectId:         "collaborative-whiteboard-c486",
-  storageBucket:     "collaborative-whiteboard-c486.firebasestorage.app",
-  messagingSenderId: "794925840469",
-  appId:             "1:794925840469:web:1e477a65a9c20857c93cdc",
-});
-
+// /** @type {import('firebase/auth').Auth} */
 const auth = window.firebase.auth();
+// /** @type {import('firebase/auth').GoogleAuthProvider} */
 const googleProvider = new window.firebase.auth.GoogleAuthProvider();
 
 // =============================================================================
@@ -36,14 +29,18 @@ export function signOut() {
 
 /**
  * Subscribes to auth state changes.
- * @param {(user: firebase.User | null) => void} callback
+ * @param {(user: import('firebase/auth').User) => void} callback
  * @returns {() => void} unsubscribe function
  */
 export function onAuthChange(callback) {
   return auth.onAuthStateChanged(callback);
 }
 
-/** Returns the currently signed-in user, or null. */
+/**
+ * Returns the currently signed-in user, or null if the user isn't signed in.
+ * 
+ * @returns {import('firebase/auth').User | null}
+ */
 export function currentUser() {
   return auth.currentUser;
 }
@@ -55,7 +52,7 @@ export function currentUser() {
 /**
  * Wires the login screen and profile button to Firebase auth state.
  *
- * @param {{ onSignedIn: (user: firebase.User) => void }} options
+ * @param {{ onSignedIn: (user: import('firebase/auth').User) => void }} options
  *   onSignedIn is called once the first time a user is confirmed authenticated.
  */
 export function mountAuthUI({ onSignedIn }) {
@@ -63,7 +60,7 @@ export function mountAuthUI({ onSignedIn }) {
   const googleBtn    = document.getElementById("googleSignInBtn");
   const loginError   = document.getElementById("loginError");
   const profileBtn   = document.getElementById("profileBtn");
-  const profilePhoto = document.getElementById("profilePhoto");
+  const profilePhoto = /** @type {HTMLImageElement} */ (document.getElementById("profilePhoto"));
   const profileIcon  = document.getElementById("profileIcon");
 
   // Sign-in button

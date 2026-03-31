@@ -17,8 +17,13 @@ import { mountAuthUI } from "../auth.js";
 // Startup — connect DOM to whiteboard + overlays
 // =============================================================================
 
-function initIntegratedApp() {
-  const canvasEl = document.getElementById("whiteboardCanvas");
+/**
+ * Starts up the application (called after the user signs in).
+ * 
+ * @param {import('firebase/auth').User} user User that's currently signed in
+ */
+function initIntegratedApp(user) {
+  const canvasEl = /** @type {HTMLCanvasElement} */ (document.getElementById("whiteboardCanvas"));
   if (!canvasEl) throw new Error("Missing canvas element #whiteboardCanvas");
 
   const whiteboard = new WhiteboardModule({
