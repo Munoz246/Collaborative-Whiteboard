@@ -165,6 +165,13 @@
               <li class="hud-placeholder-row"></li>
               <li class="hud-placeholder-row"></li>
             </ul>
+            <form id="newBoardForm" class="hud-new-board-form" hidden>
+              <input id="newBoardName" class="form-control hud-input" type="text" placeholder="Board name" maxlength="80" required />
+              <div class="hud-input-group mt-1">
+                <button type="submit" class="btn-primary">Create</button>
+                <button type="button" id="cancelNewBoardBtn" class="btn-secondary">Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
       </section>
