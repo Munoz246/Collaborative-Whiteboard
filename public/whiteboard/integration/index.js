@@ -8,6 +8,7 @@
  * Auth is handled by mountAuthUI() in auth.js — the app only initializes once
  * Firebase confirms a signed-in user.
  */
+import { saveOpenAiKey, askAI, addMessage } from "../ai.js";
 import { WhiteboardModule } from "../WhiteboardModule.js";
 import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
@@ -60,6 +61,58 @@ function initIntegratedApp(user) {
 
   // Bind "create whiteboard" button
   document.getElementById('newBoardBtn').addEventListener('click', onNewBoardClick);
+
+  // AI assistant UI bindings
+  const askBtn = document.getElementById("askAiBtn");
+  const promptInput = document.getElementById("aiPromptInput");
+  const apiKeyInput = document.getElementById("apiKeyInput");
+
+  let activeWhiteboardId = null;
+
+  // Track selected board
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest("[data-board-id]");
+    if (link) {
+      activeWhiteboardId = link.dataset.boardId;
+    }
+  });
+
+  askBtn.addEventListener("click", async () => {
+    const prompt = promptInput.value.trim();
+    const apiKey = apiKeyInput.value.trim();
+
+    if (!prompt) return;
+
+    askBtn.disabled = true;
+
+    try {
+      // Save key if entered
+      if (apiKey) {
+        await saveOpenAiKey(apiKey);
+        apiKeyInput.value = "";
+        apiKeyInput.placeholder = "API key saved";
+      }
+
+      addMessage("user", prompt);
+      promptInput.value = "";
+
+      const boardState = whiteboard?.store?.serialize?.() || {};
+
+      const res = await askAI({
+        whiteboardId: activeWhiteboardId,
+        prompt,
+        boardState
+      });
+
+      addMessage("assistant", res.answer);
+
+    } catch (err) {
+      addMessage("assistant", "Error: " + err.message);
+    }
+
+    askBtn.disabled = false;
+});
+
 }
 
 // =============================================================================
