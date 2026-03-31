@@ -21,6 +21,18 @@
   <!-- Firebase compat SDKs (must load before integration/index.js) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    // Initialize firebase so the rest of the app can use it
+    window.firebase.initializeApp({
+      apiKey:            "AIzaSyDLfw_BLPm6pxTIYCKAPn66zy4GplL_5Dw",
+      authDomain:        "collaborative-whiteboard-c486.firebaseapp.com",
+      projectId:         "collaborative-whiteboard-c486",
+      storageBucket:     "collaborative-whiteboard-c486.firebasestorage.app",
+      messagingSenderId: "794925840469",
+      appId:             "1:794925840469:web:1e477a65a9c20857c93cdc",
+    });
+  </script>
 </head>
 <body>
   <!-- Section: app root — canvas layer (z-index 0) + pointer-friendly HUD (see styles.css) -->
@@ -153,6 +165,13 @@
               <li class="hud-placeholder-row"></li>
               <li class="hud-placeholder-row"></li>
             </ul>
+            <form id="newBoardForm" class="hud-new-board-form" hidden>
+              <input id="newBoardName" class="form-control hud-input" type="text" placeholder="Board name" maxlength="80" required />
+              <div class="hud-input-group mt-1">
+                <button type="submit" class="btn-primary">Create</button>
+                <button type="button" id="cancelNewBoardBtn" class="btn-secondary">Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
       </section>

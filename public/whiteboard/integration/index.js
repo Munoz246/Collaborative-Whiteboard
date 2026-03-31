@@ -11,14 +11,25 @@
 import { WhiteboardModule } from "../WhiteboardModule.js";
 import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
-import { mountAuthUI } from "../auth.js";
+import { currentUser, mountAuthUI } from "../auth.js";
+import { refreshWhiteboardList } from "../renderer.js";
+import { createWhiteboard } from "../firestore.js";
 
 // =============================================================================
 // Startup — connect DOM to whiteboard + overlays
 // =============================================================================
 
-function initIntegratedApp() {
-  const canvasEl = document.getElementById("whiteboardCanvas");
+/**
+ * Starts up the application (called after the user signs in).
+ * 
+ * @param {import('firebase/auth').User} user User that's currently signed in
+ */
+function initIntegratedApp(user) {
+  // Get and display list of joined whiteboards
+  refreshWhiteboardList();
+
+  // Initialize whiteboard
+  const canvasEl = /** @type {HTMLCanvasElement} */ (document.getElementById("whiteboardCanvas"));
   if (!canvasEl) throw new Error("Missing canvas element #whiteboardCanvas");
 
   const whiteboard = new WhiteboardModule({
@@ -46,6 +57,51 @@ function initIntegratedApp() {
     fileManager: new BaseOverlayPanel("fileManagerOverlay", false),
   });
   overlays.mount();
+
+  // Bind "create whiteboard" button
+  document.getElementById('newBoardBtn').addEventListener('click', onNewBoardClick);
+}
+
+// =============================================================================
+// UI event implementations
+// =============================================================================
+
+/**
+ * Shows the whiteboard creation form, and handles all button events within it
+ */
+function onNewBoardClick() {
+  const newBoardForm = document.getElementById("newBoardForm");
+  const newBoardName = /** @type {HTMLInputElement} */ (document.getElementById("newBoardName"));
+  const cancelBtn = /** @type {HTMLButtonElement} */ (document.getElementById("cancelNewBoardBtn"));
+  const user = currentUser();
+
+  // Show whiteboard creation form
+  newBoardForm.hidden = false;
+  newBoardName.focus();
+
+  // Hide form when canceled
+  cancelBtn.addEventListener("click", () => {
+    newBoardForm.hidden = true;
+    newBoardName.value = "";
+  });
+
+  // Create whiteboard in the database, refresh the whiteboard list, and hide
+  // the creation form
+  newBoardForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const submitBtn = /** @type {HTMLButtonElement} */ (newBoardForm.querySelector('button[type="submit"]'));
+    submitBtn.disabled = true;
+    cancelBtn.disabled = true;
+    try {
+      await createWhiteboard(user.uid, newBoardName.value.trim());
+      await refreshWhiteboardList();
+      newBoardForm.hidden = true;
+      newBoardName.value = "";
+    } finally {
+      submitBtn.disabled = false;
+      cancelBtn.disabled = true;
+    }
+  });
 }
 
 // =============================================================================

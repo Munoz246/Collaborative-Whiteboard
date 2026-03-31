@@ -1,0 +1,10 @@
+{
+  // This strictly enforces type definitions
+
+  // "compilerOptions": {
+  //   "checkJs": true,
+  //   "module": "es2020",
+  //   "moduleResolution": "bundler"
+  // },
+  // "include": ["public/**/*.js", "public/**/*.d.ts"]
+}

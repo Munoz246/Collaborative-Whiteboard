@@ -1,0 +1,23 @@
+{
+  "name": "collaborative-whiteboard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Munoz246/Collaborative-Whiteboard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Munoz246/Collaborative-Whiteboard/issues"
+  },
+  "homepage": "https://github.com/Munoz246/Collaborative-Whiteboard#readme",
+  "devDependencies": {
+    "firebase": "^12.11.0"
+  }
+}
