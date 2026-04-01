@@ -1,34 +1,47 @@
 /**
- * Integrated whiteboard entry point (loaded as a module from index.html).
+ * Integrated whiteboard entry (loaded from whiteboard.html).
  *
- * Finds the canvas and toolbar DOM nodes, constructs WhiteboardModule with those references,
- * then wires OverlayManager so HUD buttons can open/close side panels. If anything fails
- * during startup, the user sees an alert so missing markup is obvious.
- *
- * Auth is handled by mountAuthUI() in auth.js — the app only initializes once
- * Firebase confirms a signed-in user.
+ * Requires URL query `board=<whiteboardId>`; otherwise redirects to index.html (dashboard).
+ * Auth via mountAuthUI(); canvas initializes after sign-in.
  */
 import { WhiteboardModule } from "../WhiteboardModule.js";
 import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
 import { currentUser, mountAuthUI } from "../auth.js";
 import { refreshWhiteboardList } from "../renderer.js";
-import { createWhiteboard } from "../firestore.js";
+import { createWhiteboard, getWhiteboardById } from "../firestore.js";
 
+const boardParams = new URLSearchParams(window.location.search);
+const activeBoardId = boardParams.get("board")?.trim();
+if (!activeBoardId) {
+  window.location.replace("index.html");
+} else {
 // =============================================================================
 // Startup — connect DOM to whiteboard + overlays
 // =============================================================================
 
 /**
- * Starts up the application (called after the user signs in).
- * 
- * @param {import('firebase/auth').User} user User that's currently signed in
+ * @param {import('firebase/auth').User} user
  */
-function initIntegratedApp(user) {
-  // Get and display list of joined whiteboards
+async function initIntegratedApp(user) {
+  let meta;
+  try {
+    meta = await getWhiteboardById(activeBoardId);
+  } catch (err) {
+    console.error(err);
+    window.location.replace("index.html");
+    return;
+  }
+  if (!meta) {
+    window.location.replace("index.html");
+    return;
+  }
+
+  const titleEl = document.getElementById("boardTitle");
+  if (titleEl) titleEl.textContent = meta.name;
+
   refreshWhiteboardList();
 
-  // Initialize whiteboard
   const canvasEl = /** @type {HTMLCanvasElement} */ (document.getElementById("whiteboardCanvas"));
   if (!canvasEl) throw new Error("Missing canvas element #whiteboardCanvas");
 
@@ -48,7 +61,6 @@ function initIntegratedApp(user) {
 
   whiteboard.init();
 
-  // Each overlay is a panel root id from index.html; keys must match data-overlay-target values.
   const overlays = new OverlayManager({
     toolbar: new BaseOverlayPanel("whiteboardToolbarOverlay", true),
     boards: new BaseOverlayPanel("boardNavigationOverlay", false),
@@ -58,50 +70,49 @@ function initIntegratedApp(user) {
   });
   overlays.mount();
 
-  // Bind "create whiteboard" button
-  document.getElementById('newBoardBtn').addEventListener('click', onNewBoardClick);
+  document.getElementById("newBoardBtn")?.addEventListener("click", onNewBoardClick);
 }
 
 // =============================================================================
 // UI event implementations
 // =============================================================================
 
-/**
- * Shows the whiteboard creation form, and handles all button events within it
- */
 function onNewBoardClick() {
   const newBoardForm = document.getElementById("newBoardForm");
   const newBoardName = /** @type {HTMLInputElement} */ (document.getElementById("newBoardName"));
   const cancelBtn = /** @type {HTMLButtonElement} */ (document.getElementById("cancelNewBoardBtn"));
   const user = currentUser();
+  if (!newBoardForm || !newBoardName || !cancelBtn || !user) return;
 
-  // Show whiteboard creation form
   newBoardForm.hidden = false;
   newBoardName.focus();
 
-  // Hide form when canceled
-  cancelBtn.addEventListener("click", () => {
-    newBoardForm.hidden = true;
-    newBoardName.value = "";
-  });
-
-  // Create whiteboard in the database, refresh the whiteboard list, and hide
-  // the creation form
-  newBoardForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const submitBtn = /** @type {HTMLButtonElement} */ (newBoardForm.querySelector('button[type="submit"]'));
-    submitBtn.disabled = true;
-    cancelBtn.disabled = true;
-    try {
-      await createWhiteboard(user.uid, newBoardName.value.trim());
-      await refreshWhiteboardList();
+  cancelBtn.addEventListener(
+    "click",
+    () => {
       newBoardForm.hidden = true;
       newBoardName.value = "";
-    } finally {
-      submitBtn.disabled = false;
+    },
+    { once: true },
+  );
+
+  newBoardForm.addEventListener(
+    "submit",
+    async (e) => {
+      e.preventDefault();
+      const submitBtn = /** @type {HTMLButtonElement} */ (newBoardForm.querySelector('button[type="submit"]'));
+      submitBtn.disabled = true;
       cancelBtn.disabled = true;
-    }
-  });
+      try {
+        const id = await createWhiteboard(user.uid, newBoardName.value.trim());
+        window.location.href = `whiteboard.html?board=${encodeURIComponent(id)}`;
+      } finally {
+        submitBtn.disabled = false;
+        cancelBtn.disabled = false;
+      }
+    },
+    { once: true },
+  );
 }
 
 // =============================================================================
@@ -114,3 +125,5 @@ try {
   console.error(err);
   alert("Failed to initialize integrated whiteboard: " + err.message);
 }
+
+} // activeBoardId

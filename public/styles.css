@@ -816,9 +816,179 @@ body {
   box-shadow: 0 5px 12px rgba(15, 23, 42, 0.1), 0 1px 0 rgba(255, 255, 255, 0.45) inset;
   padding: 10px 15px 10px 15px;
   display: grid;
-  grid-template-columns: 30px minmax(180px, 1fr) auto auto;
+  grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 12px;
+}
+
+a.dashboard-board-card-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+a.dashboard-board-card-link:hover {
+  filter: brightness(0.98);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12), 0 1px 0 rgba(255, 255, 255, 0.45) inset;
+}
+
+a.dashboard-board-card-link:focus-visible {
+  outline: 2px solid #1e66de;
+  outline-offset: 2px;
+}
+
+.dashboard-board-link-spacer {
+  min-width: 0;
+}
+
+.dashboard-board-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.dashboard-empty-state {
+  margin: 28px 0 0;
+  font-size: 1.05rem;
+  color: #6b7280;
+}
+
+/* ---- Dashboard: create whiteboard modal ---- */
+.dashboard-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.dashboard-modal-root[hidden] {
+  display: none;
+}
+
+.dashboard-modal-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.dashboard-modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(400px, 100%);
+  padding: 28px 26px 24px;
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+.dashboard-modal-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.dashboard-modal-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
+.dashboard-modal-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 4px;
+}
+
+.dashboard-modal-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-modal-input:focus {
+  border-color: rgba(30, 102, 222, 0.55);
+  box-shadow: 0 0 0 3px rgba(30, 102, 222, 0.18);
+}
+
+.dashboard-modal-error {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  color: #b91c1c;
+}
+
+.dashboard-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.dashboard-modal-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.dashboard-modal-btn--secondary {
+  background: rgba(255, 255, 255, 0.85);
+  color: #111827;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-modal-btn--secondary:hover {
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-modal-btn--primary {
+  color: #ffffff;
+  background: linear-gradient(180deg, #2f7af8 0%, #1e66de 100%);
+  box-shadow: 0 6px 16px rgba(30, 102, 222, 0.28);
+}
+
+.dashboard-modal-btn--primary:hover {
+  filter: brightness(1.03);
+  box-shadow: 0 8px 18px rgba(30, 102, 222, 0.32);
+}
+
+.dashboard-modal-btn--primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.dashboard-profile-photo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
 }
 
 .dashboard-board-thumb {
@@ -939,13 +1109,23 @@ body {
   }
 
   .dashboard-board-card {
-    grid-template-columns: 30px 1fr auto;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
     row-gap: 8px;
     padding: 10px;
   }
 
   .dashboard-board-title {
     font-size: 1rem;
+    grid-column: 2;
+  }
+
+  .dashboard-board-link-spacer {
+    display: none;
+  }
+
+  .dashboard-board-chevron {
+    grid-row: 1;
+    grid-column: 3;
   }
 
   .dashboard-owner {

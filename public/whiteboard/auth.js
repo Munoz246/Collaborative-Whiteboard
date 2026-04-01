@@ -38,7 +38,7 @@ export function onAuthChange(callback) {
 
 /**
  * Returns the currently signed-in user, or null if the user isn't signed in.
- * 
+ *
  * @returns {import('firebase/auth').User | null}
  */
 export function currentUser() {
@@ -63,6 +63,11 @@ export function mountAuthUI({ onSignedIn }) {
   const profilePhoto = /** @type {HTMLImageElement} */ (document.getElementById("profilePhoto"));
   const profileIcon  = document.getElementById("profileIcon");
 
+  if (loginScreen) {
+    loginScreen.classList.add("is-hidden");
+    loginScreen.setAttribute("aria-hidden", "true");
+  }
+
   // Sign-in button
   googleBtn.addEventListener("click", async () => {
     loginError.textContent = "";
@@ -83,40 +88,54 @@ export function mountAuthUI({ onSignedIn }) {
 
   let appInitialised = false;
 
-  onAuthChange((user) => {
-    if (user) {
-      // Hide login screen
-      loginScreen.classList.add("is-hidden");
+  function bindAuthListener() {
+    onAuthChange((user) => {
+      if (user) {
+        // Hide login screen
+        loginScreen.classList.add("is-hidden");
+        loginScreen.setAttribute("aria-hidden", "true");
 
-      // Show user photo in profile button
-      if (user.photoURL) {
-        profilePhoto.src = user.photoURL;
-        profilePhoto.alt = user.displayName ?? "Profile photo";
-        profilePhoto.hidden = false;
-        profileIcon.style.display = "none";
+        // Show user photo in profile button
+        if (user.photoURL) {
+          profilePhoto.src = user.photoURL;
+          profilePhoto.alt = user.displayName ?? "Profile photo";
+          profilePhoto.hidden = false;
+          profileIcon.style.display = "none";
+        }
+        profileBtn.title = `Signed in as ${user.displayName ?? user.email} — click to sign out`;
+        profileBtn.setAttribute("aria-label", "Sign out");
+
+        if (!appInitialised) {
+          appInitialised = true;
+          onSignedIn(user);
+        }
+      } else {
+        // Reload if the app was already running so in-memory state is cleared cleanly
+        if (appInitialised) {
+          window.location.reload();
+          return;
+        }
+
+        if (auth.currentUser) {
+          return;
+        }
+
+        loginScreen.classList.remove("is-hidden");
+        loginScreen.setAttribute("aria-hidden", "false");
+
+        // Reset profile button to default state
+        profilePhoto.hidden = true;
+        profilePhoto.src = "";
+        profileIcon.style.display = "";
+        profileBtn.title = "Sign in";
+        profileBtn.setAttribute("aria-label", "Sign in");
       }
-      profileBtn.title = `Signed in as ${user.displayName ?? user.email} — click to sign out`;
-      profileBtn.setAttribute("aria-label", "Sign out");
+    });
+  }
 
-      if (!appInitialised) {
-        appInitialised = true;
-        onSignedIn(user);
-      }
-    } else {
-      // Reload if the app was already running so in-memory state is cleared cleanly
-      if (appInitialised) {
-        window.location.reload();
-        return;
-      }
-
-      loginScreen.classList.remove("is-hidden");
-
-      // Reset profile button to default state
-      profilePhoto.hidden = true;
-      profilePhoto.src = "";
-      profileIcon.style.display = "";
-      profileBtn.title = "Sign in";
-      profileBtn.setAttribute("aria-label", "Sign in");
-    }
-  });
+  if (typeof auth.authStateReady === "function") {
+    void auth.authStateReady().then(bindAuthListener);
+  } else {
+    bindAuthListener();
+  }
 }

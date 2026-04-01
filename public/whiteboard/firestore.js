@@ -67,3 +67,15 @@ export async function getWhiteboards(userID) {
 
     return boards;
 }
+
+/**
+ * Read a single whiteboard document (e.g. workspace title).
+ *
+ * @param {string} boardId Firestore document id
+ * @returns {Promise<{ id: string, name: string } | null>}
+ */
+export async function getWhiteboardById(boardId) {
+    const snap = await db.collection("whiteboards").doc(boardId).get();
+    if (!snap.exists) return null;
+    return { id: snap.id, name: snap.data()?.name ?? "Untitled" };
+}
