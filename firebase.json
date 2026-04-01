@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "source": "functions"
+  },
   "hosting": {
     "public": "public",
     "ignore": [
@@ -7,6 +10,14 @@
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/api/saveOpenAiKey",
+        "function": "saveOpenAiKey"
+      },
+      {
+        "source": "/api/askWhiteboardAssistant",
+        "function": "askWhiteboardAssistant"
+      },
       {
         "source": "**",
         "destination": "/index.html"
