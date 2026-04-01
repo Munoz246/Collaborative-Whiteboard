@@ -30,6 +30,7 @@ export async function refreshWhiteboardList() {
     for (const board of boards) {
         const item = document.createElement("a");
         item.dataset.boardId = board.id;
+        item.href = `whiteboard.html?board=${encodeURIComponent(board.id)}`;
         item.textContent = board.name;
         list.appendChild(item);
     }
