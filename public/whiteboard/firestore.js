@@ -12,20 +12,18 @@ const db = window.firebase.firestore();
  * @returns {Promise<string>} ID of the newly created whiteboard
  */
 export async function createWhiteboard(userID, name) {
-    // Add new whiteboard with userID as the owner
-    const wb = await db.collection("whiteboards").add({
-        name: name
+    // Simultaneously create the whiteboard and set userID as the owner.
+    // Note: This approach works best with the Firestore security roles.
+    const newWB = db.collection('whiteboards').doc();
+
+    await newWB.set({
+        name,
+        members: [ userID ],
+        moderators: [],
+        owner: userID
     });
-
-    console.log('Whiteboard created:', wb.id);
     
-    // Set user as the new whiteboard's owner
-    await db.collection('whiteboards').doc(wb.id)
-            .collection('members').doc(userID).set(
-                { role: 'owner', userID }
-            );
-
-    return wb.id;
+    return newWB.id;
 }
 
 /**
@@ -36,36 +34,27 @@ export async function createWhiteboard(userID, name) {
  * @returns {Promise}
  */
 export async function addUserToWhiteboard(whiteboardID, userID) {
-    await db.collection('whiteboards').doc(whiteboardID)
-            .collection('members').doc(userID).set(
-                { role: "member", userID },
-                { merge: true }
-            );
+    await db.collection('whiteboards').doc(whiteboardID).update({
+        'members': window.firebase.firestore.FieldValue.arrayUnion(userID)
+    });
 }
 
 /**
  * Get list of whiteboards available to a certain user.
  *
  * @param {string} userID Which user to find whiteboards for
- * @returns {Promise<{ id: string, name: string }[]>} List of whiteboard IDs and names
+ * @returns {Promise<{ id: string, name: string, members: { [userId: string]: 'member' | 'mod' | 'owner' } }[]>} List of joined whiteboards
  */
 export async function getWhiteboards(userID) {
     console.log('Getting joined whiteboards...');
 
-    // Find all "members" collections this user is included in
-    const memberships = await db.collectionGroup('members')
-        .where('userID', '==', userID)
+    const snapshot = await db.collection('whiteboards')
+        .where(`members`, 'array-contains', userID)
         .get();
-    
-    // doc.ref.parent is the "members" collection; .parent is the whiteboard doc
-    const boards = await Promise.all(
-        memberships.docs.map(async (doc) => {
-            const wbSnap = await doc.ref.parent.parent.get();
-            return { id: wbSnap.id, name: wbSnap.data()?.name ?? "Untitled" };
-        })
-    );
 
-    return boards;
+    const whiteboards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) );
+
+    return whiteboards;
 }
 
 /**

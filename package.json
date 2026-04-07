@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/Munoz246/Collaborative-Whiteboard#readme",
   "devDependencies": {
+    "@types/firebase": "^2.4.32",
     "firebase": "^12.11.0"
   }
 }
