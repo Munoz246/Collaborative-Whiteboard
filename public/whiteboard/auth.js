@@ -8,9 +8,7 @@
  * with a callback that receives the signed-in user and initializes the app.
  */
 
-// /** @type {import('firebase/auth').Auth} */
 const auth = window.firebase.auth();
-// /** @type {import('firebase/auth').GoogleAuthProvider} */
 const googleProvider = new window.firebase.auth.GoogleAuthProvider();
 
 // =============================================================================
