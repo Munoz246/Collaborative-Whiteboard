@@ -83,6 +83,20 @@
       </div>
 
       <div class="hud-cluster hud-cluster--right overlay-item">
+        <div class="notif-anchor">
+          <button id="notifBtn" type="button" class="hud-icon-btn hud-icon-btn--round" title="Notifications" aria-label="Notifications">
+            <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span id="notifBadge" class="notif-badge" hidden></span>
+          </button>
+          <div id="notifPanel" class="notif-panel" hidden>
+            <div class="notif-panel-header">Join Requests</div>
+            <ul id="notifList" class="notif-list"></ul>
+            <p id="notifEmpty" class="notif-empty">No pending requests.</p>
+          </div>
+        </div>
         <button id="profileBtn" type="button" class="hud-icon-btn hud-icon-btn--round" title="Sign in" aria-label="Sign in">
           <img id="profilePhoto" class="profile-photo" src="" alt="" aria-hidden="true" />
           <svg id="profileIcon" class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

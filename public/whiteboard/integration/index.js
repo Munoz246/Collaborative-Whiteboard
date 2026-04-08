@@ -10,7 +10,8 @@ import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
 import { currentUser, mountAuthUI } from "../auth.js";
 import { refreshWhiteboardList } from "../renderer.js";
-import { createWhiteboard, getWhiteboardById } from "../firestore.js";
+import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById } from "../firestore.js";
+import { initNotifications } from "../notifications.js";
 
 const boardParams = new URLSearchParams(window.location.search);
 const activeBoardId = boardParams.get("board")?.trim();
@@ -38,10 +39,14 @@ async function initIntegratedApp(user) {
     return;
   }
 
+
   const titleEl = document.getElementById("boardTitle");
   if (titleEl) titleEl.textContent = meta.name;
-
-  refreshWhiteboardList();
+  
+  getJoinedWhiteboards().then(boards => {
+    refreshWhiteboardList(boards);
+    initNotifications(boards);
+  });
 
   const canvasEl = /** @type {HTMLCanvasElement} */ (document.getElementById("whiteboardCanvas"));
   if (!canvasEl) throw new Error("Missing canvas element #whiteboardCanvas");
