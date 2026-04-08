@@ -3,13 +3,38 @@
  */
 
 import { mountAuthUI, currentUser } from "../auth.js";
-import { getJoinedWhiteboards, createWhiteboard, addUserToWhiteboard } from "../firestore.js";
+import { getJoinedWhiteboards, createWhiteboard, addUserToWhiteboard, requestToJoinWhiteboard } from "../firestore.js";
+
+/**
+ * Shows a temporary toast message at the bottom of the screen.
+ *
+ * @param {string} message
+ */
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'dashboard-toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  // Trigger fade-in on next frame
+  requestAnimationFrame(() => toast.classList.add('dashboard-toast--visible'));
+
+  setTimeout(() => {
+    toast.classList.remove('dashboard-toast--visible');
+    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+  }, 3000);
+}
 
 /** @param {{ id: string, name: string }} board */
 function boardWorkspaceHref(board) {
   return `whiteboard.html?board=${encodeURIComponent(board.id)}`;
 }
 
+/**
+ * Populates the list of joined whiteboards with the provided information.
+ * 
+ * @param {{ id: string, name: string }[]} boards List of whiteboards
+ */
 function renderBoardList(boards) {
   const emptyEl = document.getElementById("dashboardEmptyState");
   const mount = document.getElementById("dashboardBoardsMount");
@@ -53,6 +78,10 @@ function renderBoardList(boards) {
   }
 }
 
+/**
+ * Fetches the list of whiteboards the currently signed in user has joined, and
+ * populates the whiteboard list.
+ */
 async function loadAndRenderBoards() {
   const boards = await getJoinedWhiteboards();
   renderBoardList(boards);
@@ -216,9 +245,11 @@ function wireJoinModal() {
     joinModalError.textContent = "";
     joinModalSubmit.disabled = true;
     try {
-      await addUserToWhiteboard(whiteboardId, user.uid);
+      await requestToJoinWhiteboard(whiteboardId, user.uid);
       closeJoinWhiteboardModal();
-      await loadAndRenderBoards();
+      showToast('Join request sent!');
+      // await loadAndRenderBoards();
+      
     } catch (err) {
       console.error(err);
       joinModalError.textContent = "Could not join that whiteboard. Check the ID and try again.";

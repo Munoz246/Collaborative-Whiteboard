@@ -2,7 +2,7 @@
  * Functions that access/modify data in the Firestore database.
  */
 
-import { currentUser, currentUser } from "./auth.js";
+import { currentUser } from "./auth.js";
 import { pickRandom } from "./utils.js";
 
 const db = window.firebase.firestore();
@@ -23,7 +23,8 @@ export async function createWhiteboard(userID, name) {
         name,
         members: [ userID ],
         moderators: [],
-        owner: userID
+        owner: userID,
+        pendingRequests: false
     });
     
     return newWB.id;
@@ -37,7 +38,7 @@ export async function createWhiteboard(userID, name) {
  */
 export async function getWhiteboardById(boardId) {
     const snap = await db.collection("whiteboards").doc(boardId).get();
-    if (!snap.exists) return null;
+    if (!snap.exists) throw Error(`Could not find whiteboard ${boardId}`);
     const data = snap.data();
     return { id: snap.id, name: data?.name ?? "Untitled", ...data };
 }
@@ -60,10 +61,7 @@ export async function getJoinedWhiteboards() {
     console.log('Getting joined whiteboards...');
 
     const uid = currentUser().uid;
-    if (!uid) {
-        console.error('Could not get user id');
-        return {};
-    }
+    if (!uid) throw Error('User not signed in');
 
     const snapshot = await db.collection('whiteboards')
         .where(`members`, 'array-contains', uid)
@@ -80,12 +78,54 @@ export async function getJoinedWhiteboards() {
  * @param {string} whiteboardID ID of the whiteboard the user wants to join
  * @param {string} userID ID of the requesting user
  */
-export async function requestToJoinWhiteboard(whiteboardID, userID) {
+export async function requestToJoinWhiteboard(whiteboardID) {
+    const user = currentUser();
+    if (!user) throw Error('User is not signed in');
+
     await db.collection('whiteboards').doc(whiteboardID)
-        .collection('join-requests').doc(userID).set({
-            userID,
-            timestamp: window.firebase.firestore.FieldValue.serverTimestamp()
+        .collection('join-requests').doc(user.uid).set({
+            userID: user.uid,
+            timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
+            whiteboardID
         });
+}
+
+/**
+ * Gets a list of join requests for whiteboards the signed in user either owns,
+ * or is moderating.
+ *
+ * @param {{ id: string, name: string, members: string[], mods: string[], owner: string }[]} whiteboards
+ * List of joined whiteboards (can be obtained using `getJoinedWhiteboards()`).
+ * @returns {{ userID: string, whiteboardID: string, whiteboardName: string }[]}
+ * List of join requests on the provided whiteboards that the signed in user can accept.
+ */
+export async function getPendingJoinRequests(whiteboards) {
+    const user = currentUser();
+    if (!user) throw Error('User is not signed in');
+    
+    // Get all whiteboards that the user owns or moderates
+    const boardNames = {}
+    const boardIDs = []
+    for (let i = 0; i < whiteboards.length; i++) {
+        const board = whiteboards[i];
+        if (user.uid == board.owner || board.mods.includes(user.uid)) {
+            boardNames[board.id] = board.name;
+            boardIDs.push(board.id);
+        }
+    }
+    
+    const snapshot = await db.collectionGroup('join-requests')
+        .where('whiteboardID', 'in', boardIDs)
+        .get();
+    
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            whiteboardID: data.whiteboardID,
+            userID: data.userID,
+            whiteboardName: boardNames[data.whiteboardID]
+        };
+    });
 }
 
 /**
@@ -102,9 +142,7 @@ export async function acceptJoinRequest(whiteboardID, userID) {
     await db.runTransaction(async (transaction) => {
         const joinRequest = await transaction.get(joinRequestRef);
 
-        if (!joinRequest.exists) {
-            throw new Error('Join request not found');
-        }
+        if (!joinRequest.exists) throw Error('Join request not found');
 
         transaction.delete(joinRequestRef);
         transaction.update(whiteboardRef, {
@@ -147,18 +185,12 @@ export async function addUserToWhiteboard(whiteboardID, userID) {
  */
 export async function promoteToMod(whiteboardID, userID) {
     const wb = await getWhiteboardById(whiteboardID);
-    if (!wb) {
-        console.error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
-        return;
-    }
-    if (!wb.members.includes(userID)) {
-        console.error(`User ${userID} is not a member of whiteboard ${whiteboardID}`);
-        return;
-    }
-    if (wb.owner == userID || wb.mods.includes(userID)) {
-        console.error(`User ${userID} is already privileged in whiteboard ${whiteboardID}`);
-        return;
-    }
+    if (!wb)
+        throw Error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
+    if (!wb.members.includes(userID))
+        throw Error(`User ${userID} is not a member of whiteboard ${whiteboardID}`);
+    if (wb.owner == userID || wb.mods.includes(userID))
+        throw Error(`User ${userID} is already privileged in whiteboard ${whiteboardID}`);
 
     await db.collection('whiteboards').doc(whiteboardID).update({
         mods: [ ...wb.mods, userID ]
@@ -173,18 +205,12 @@ export async function promoteToMod(whiteboardID, userID) {
  */
 export async function transferOwnership(whiteboardID, userID) {
     const wb = await getWhiteboardById(whiteboardID);
-    if (!wb) {
-        console.error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
-        return;
-    }
-    if (!wb.members.includes(userID)) {
-        console.error(`User ${userID} is not a member of whiteboard ${whiteboardID}`);
-        return;
-    }
-    if (userID == wb.owner) {
-        console.error(`User ${userID} is already the owner of whiteboard ${whiteboardID}`);
-        return;
-    }
+    if (!wb)
+        throw Error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
+    if (!wb.members.includes(userID))
+        throw Error(`User ${userID} is not a member of whiteboard ${whiteboardID}`);
+    if (userID == wb.owner)
+        throw Error(`User ${userID} is already the owner of whiteboard ${whiteboardID}`);
 
     const payload = {
         owner: userID,
@@ -210,16 +236,10 @@ export async function transferOwnership(whiteboardID, userID) {
  */
 export async function leaveWhiteboard(whiteboardID) {
     const user = currentUser();
-    if (!user) {
-        console.error(`User not signed in`);
-        return;
-    }
+    if (!user) throw Error(`User not signed in`);
 
     const wb = await getWhiteboardById(whiteboardID);
-    if (!wb) {
-        console.error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
-        return;
-    }
+    if (!wb) throw Error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
 
     const payload = {
         members: wb.members.filter(uid => user.uid) // Remove self from member list
