@@ -80,6 +80,12 @@
             <path d="M5 19h14" />
           </svg>
         </button>
+        <button id="shareBtn" type="button" class="hud-icon-btn hud-icon-btn--round" title="Share" aria-label="Share whiteboard">
+          <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </button>
       </div>
 
       <div class="hud-cluster hud-cluster--right overlay-item">
@@ -255,6 +261,47 @@
           </div>
         </div>
       </section>
+
+    </div>
+
+    <div id="shareModal" class="login-screen" hidden aria-modal="true" role="dialog" aria-labelledby="shareModalTitle">
+      <div class="login-card hud-glass" style="width:min(440px,calc(100vw - 40px));text-align:left">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <h2 id="shareModalTitle" class="login-title" style="font-size:1.1rem;margin:0">Share Whiteboard</h2>
+          <button id="shareModalCloseBtn" type="button" class="hud-panel-close" aria-label="Close share panel" style="font-size:1.4rem">×</button>
+        </div>
+
+        <div class="d-flex flex-column gap-3">
+
+          <div class="d-flex flex-column gap-1">
+            <label style="font-size:0.8rem;font-weight:600;color:#374151" for="shareLinkInput">Link</label>
+            <div class="share-link-row">
+              <input id="shareLinkInput" class="form-control hud-input" type="text" readonly />
+              <button id="shareCopyBtn" class="btn btn-dark rounded-pill" type="button" style="white-space:nowrap">Copy</button>
+            </div>
+          </div>
+
+          <hr class="share-section-divider" />
+
+          <div class="share-qr-block">
+            <div id="shareQrContainer"></div>
+            <span style="font-size:0.78rem;color:#6b7280">Scan to open this board</span>
+          </div>
+
+          <div id="shareAddUserSection">
+            <hr class="share-section-divider" />
+            <div class="d-flex flex-column gap-1">
+              <label style="font-size:0.8rem;font-weight:600;color:#374151" for="shareAddUserInput">Add member by user ID</label>
+              <div class="share-link-row">
+                <input id="shareAddUserInput" class="form-control hud-input" type="text" placeholder="User ID" />
+                <button id="shareAddUserBtn" class="btn btn-dark rounded-pill" type="button">Add</button>
+              </div>
+              <span id="shareAddUserStatus" class="share-status" aria-live="polite"></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
 
     <div id="joinRequestModal" class="login-screen" hidden aria-modal="true" role="dialog" aria-labelledby="joinRequestTitle">
@@ -299,6 +346,7 @@
     crossorigin="anonymous"
   ></script>
   <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script type="module" src="./whiteboard/integration/whiteboard.js"></script>
 </body>
 </html>

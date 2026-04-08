@@ -10,7 +10,7 @@ import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
 import { currentUser, mountAuthUI } from "../auth.js";
 import { refreshWhiteboardList } from "../renderer.js";
-import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById, requestToJoinWhiteboard } from "../firestore.js";
+import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById, requestToJoinWhiteboard, addUserToWhiteboard } from "../firestore.js";
 import { initNotifications } from "../notifications.js";
 
 /**
@@ -46,7 +46,7 @@ async function initPage(user, boardID) {
 
   const whiteboard = initWhiteboard();
 
-  initOverlayPanels(boardID);
+  initOverlayPanels(boardID, user, meta);
 }
 
 /**
@@ -119,10 +119,12 @@ function initWhiteboard() {
 /**
  * Binds overlay panels (like whiteboard list, ai chat, etc) to UI elements, and
  * defines interaction logic.
- * 
+ *
  * @param {string} boardID Whiteboard ID
+ * @param {import('firebase/auth').User} user Currently signed in user
+ * @param {{ id: string, name: string, members: string[], mods: string[], owner: string }} meta Whiteboard metadata
  */
-function initOverlayPanels(boardID) {
+function initOverlayPanels(boardID, user, meta) {
   const overlays = new OverlayManager({
     toolbar: new BaseOverlayPanel("whiteboardToolbarOverlay", true),
     boards: new BaseOverlayPanel("boardNavigationOverlay", false),
@@ -136,6 +138,7 @@ function initOverlayPanels(boardID) {
   document.getElementById('newBoardBtn').addEventListener('click', onNewBoardClick);
 
   initAIPanel(boardID);
+  initSharePanel(boardID, user, meta);
 }
 
 /**
@@ -183,6 +186,72 @@ function initAIPanel(boardID) {
     }
 
     askBtn.disabled = false;
+  });
+}
+
+/**
+ * Wires up the share modal: copy link, QR code generation, and add-member form.
+ *
+ * @param {string} boardID
+ * @param {import('firebase/auth').User} user Currently signed in user
+ * @param {{ id: string, name: string, members: string[], mods: string[], owner: string }} meta Whiteboard metadata
+ */
+function initSharePanel(boardID, user, meta) {
+  const modal = document.getElementById("shareModal");
+  const openBtn = document.getElementById("shareBtn");
+  const closeBtn = document.getElementById("shareModalCloseBtn");
+  const linkInput = /** @type {HTMLInputElement} */ (document.getElementById("shareLinkInput"));
+  const copyBtn = document.getElementById("shareCopyBtn");
+  const addUserSection = document.getElementById("shareAddUserSection");
+  const addUserInput = /** @type {HTMLInputElement} */ (document.getElementById("shareAddUserInput"));
+  const addUserBtn = document.getElementById("shareAddUserBtn");
+  const addUserStatus = document.getElementById("shareAddUserStatus");
+
+  const shareUrl = `${location.origin}${location.pathname}?board=${encodeURIComponent(boardID)}`;
+  linkInput.value = shareUrl;
+
+  const isPrivileged = meta.owner === user.uid || (meta.mods ?? []).includes(user.uid);
+  if (addUserSection) addUserSection.hidden = !isPrivileged;
+
+  let qrGenerated = false;
+
+  openBtn.addEventListener("click", () => {
+    modal.removeAttribute("hidden");
+    if (!qrGenerated) {
+      qrGenerated = true;
+      const container = document.getElementById("shareQrContainer");
+      // @ts-ignore — QRCode loaded via CDN script tag
+      new QRCode(container, { text: shareUrl, width: 180, height: 180 });
+    }
+  });
+
+  closeBtn.addEventListener("click", () => modal.setAttribute("hidden", ""));
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.setAttribute("hidden", "");
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(shareUrl);
+    copyBtn.textContent = "Copied!";
+    setTimeout(() => { copyBtn.textContent = "Copy"; }, 2000);
+  });
+
+  addUserBtn.addEventListener("click", async () => {
+    const uid = addUserInput.value.trim();
+    if (!uid) return;
+    addUserBtn.disabled = true;
+    addUserStatus.textContent = "Adding…";
+    try {
+      await addUserToWhiteboard(boardID, uid);
+      addUserStatus.textContent = "User added!";
+      addUserInput.value = "";
+    } catch (err) {
+      console.error(err);
+      addUserStatus.textContent = "Failed: " + err.message;
+    } finally {
+      addUserBtn.disabled = false;
+    }
   });
 }
 
