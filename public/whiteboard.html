@@ -257,6 +257,18 @@
       </section>
     </div>
 
+    <div id="joinRequestModal" class="login-screen" hidden aria-modal="true" role="dialog" aria-labelledby="joinRequestTitle">
+      <div class="login-card hud-glass">
+        <h2 id="joinRequestTitle" class="login-title" style="font-size:1.25rem">Request to Join Whiteboard</h2>
+        <p class="login-subtitle">Would you like to request to join this whiteboard?</p>
+        <p id="joinRequestStatus" class="login-error" aria-live="polite"></p>
+        <div class="hud-input-group mt-2">
+          <button id="joinRequestConfirmBtn" class="btn-primary" type="button">Request to Join</button>
+          <button id="joinRequestCancelBtn" class="btn-secondary" type="button">Back to Dashboard</button>
+        </div>
+      </div>
+    </div>
+
     <div id="loginScreen" class="login-screen is-hidden" aria-modal="true" role="dialog" aria-label="Sign in" aria-hidden="true">
       <div class="login-card hud-glass">
         <svg class="login-logo" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">

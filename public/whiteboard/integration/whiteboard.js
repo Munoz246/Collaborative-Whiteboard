@@ -10,7 +10,7 @@ import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
 import { currentUser, mountAuthUI } from "../auth.js";
 import { refreshWhiteboardList } from "../renderer.js";
-import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById } from "../firestore.js";
+import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById, requestToJoinWhiteboard } from "../firestore.js";
 import { initNotifications } from "../notifications.js";
 
 /**
@@ -30,6 +30,12 @@ async function initPage(user, boardID) {
     return;
   }
 
+  // If user isn't a member, show join requests modal
+  if (!meta.members.includes(user.uid)) {
+    showJoinRequestModal(meta);
+    return;
+  }
+
   const titleEl = document.getElementById("boardTitle");
   if (titleEl) titleEl.textContent = meta.name;
   
@@ -44,8 +50,47 @@ async function initPage(user, boardID) {
 }
 
 /**
+ * Shows the "Request to Join" modal for a board the user can't access.
+ * Wires up the confirm button to call requestToJoinWhiteboard.
+ *
+ * @param {{ id: string, name: string, members: string[], mods: string[], owner: string }} boardInfo
+ */
+function showJoinRequestModal(boardInfo) {
+  const modal = document.getElementById("joinRequestModal");
+  const confirmBtn = document.getElementById("joinRequestConfirmBtn");
+  const cancelBtn = document.getElementById("joinRequestCancelBtn");
+  const statusEl = document.getElementById("joinRequestStatus");
+  const titleEl = document.getElementById("joinRequestTitle");
+
+  if (!modal) return;
+
+  modal.removeAttribute("hidden");
+
+  titleEl.textContent = boardInfo.name;
+
+  confirmBtn.addEventListener("click", async () => {
+    confirmBtn.disabled = true;
+    statusEl.textContent = "Sending request…";
+    try {
+      await requestToJoinWhiteboard(boardInfo.id);
+      statusEl.textContent = "Request sent!";
+      confirmBtn.hidden = true;
+      cancelBtn.textContent = "Back to dashboard";
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Failed to send request. Please try again.";
+      confirmBtn.disabled = false;
+    }
+  }, { once: true });
+
+  cancelBtn.addEventListener("click", () => {
+    window.location.replace("index.html");
+  }, { once: true });
+}
+
+/**
  * Initializes WhiteboardModule class and binds UI elements.
- * 
+ *
  * @returns {WhiteboardModule}
  */
 function initWhiteboard() {

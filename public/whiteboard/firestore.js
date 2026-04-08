@@ -22,7 +22,7 @@ export async function createWhiteboard(userID, name) {
     await newWB.set({
         name,
         members: [ userID ],
-        moderators: [],
+        modss: [],
         owner: userID,
         pendingRequests: false
     });
@@ -58,7 +58,7 @@ export async function deleteWhiteboard(whiteboardID) {
  * @returns {Promise<{ id: string, name: string, members: string[], mods: string[], owner: string }[]>} List of joined whiteboards
  */
 export async function getJoinedWhiteboards() {
-    console.log('Getting joined whiteboards...');
+    console.log('Fetching joined whiteboards...');
 
     const uid = currentUser().uid;
     if (!uid) throw Error('User not signed in');
@@ -117,9 +117,10 @@ export async function getPendingJoinRequests(whiteboards) {
     if (boardIDs.length === 0) return [];
 
     const snapshots = await Promise.all(
-        boardIDs.map(id =>
-            db.collection('whiteboards').doc(id).collection('join-requests').get()
-        )
+        boardIDs.map(async id => {
+            console.log(`Fetching join requests for whiteboard ${id}...`);
+            return await db.collection('whiteboards').doc(id).collection('join-requests').get()
+        })
     );
 
     return snapshots.flatMap((snap, i) =>
