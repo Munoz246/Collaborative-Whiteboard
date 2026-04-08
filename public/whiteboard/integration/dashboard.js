@@ -3,7 +3,7 @@
  */
 
 import { mountAuthUI, currentUser } from "../auth.js";
-import { getWhiteboards, createWhiteboard, addUserToWhiteboard } from "../firestore.js";
+import { getJoinedWhiteboards, createWhiteboard, addUserToWhiteboard } from "../firestore.js";
 
 /** @param {{ id: string, name: string }} board */
 function boardWorkspaceHref(board) {
@@ -54,9 +54,7 @@ function renderBoardList(boards) {
 }
 
 async function loadAndRenderBoards() {
-  const user = currentUser();
-  if (!user) return;
-  const boards = await getWhiteboards(user.uid);
+  const boards = await getJoinedWhiteboards();
   renderBoardList(boards);
 }
 

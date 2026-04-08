@@ -3,15 +3,14 @@
  */
 
 import { currentUser } from "./auth.js";
-import { getWhiteboards } from "./firestore.js";
+import { getJoinedWhiteboards } from "./firestore.js";
 
 /**
  * Fetches all whiteboards the current user can access, and updates the
  * whiteboards panel.
  */
 export async function refreshWhiteboardList() {
-    const user = currentUser();
-    const boards = await getWhiteboards(user.uid);
+    const boards = await getJoinedWhiteboards();
     const list = document.getElementById("joinedBoardsList");
 
     // Remove current list content
