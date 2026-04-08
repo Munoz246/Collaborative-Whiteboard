@@ -4,6 +4,7 @@
 
 import { mountAuthUI, currentUser } from "../auth.js";
 import { getJoinedWhiteboards, createWhiteboard, addUserToWhiteboard, requestToJoinWhiteboard } from "../firestore.js";
+import { initNotifications } from "../notifications.js";
 
 /**
  * Shows a temporary toast message at the bottom of the screen.
@@ -248,8 +249,6 @@ function wireJoinModal() {
       await requestToJoinWhiteboard(whiteboardId, user.uid);
       closeJoinWhiteboardModal();
       showToast('Join request sent!');
-      // await loadAndRenderBoards();
-      
     } catch (err) {
       console.error(err);
       joinModalError.textContent = "Could not join that whiteboard. Check the ID and try again.";
@@ -282,9 +281,9 @@ function initDashboard(user) {
   wireCreateModal();
   wireJoinModal();
   wireActions();
-  loadAndRenderBoards().catch((err) => {
-    console.error(err);
-    window.alert("Could not load whiteboards.");
+  getJoinedWhiteboards().then(boards => {
+    renderBoardList(boards);
+    initNotifications(boards);
   });
 }
 

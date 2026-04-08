@@ -96,7 +96,7 @@ export async function requestToJoinWhiteboard(whiteboardID) {
  *
  * @param {{ id: string, name: string, members: string[], mods: string[], owner: string }[]} whiteboards
  * List of joined whiteboards (can be obtained using `getJoinedWhiteboards()`).
- * @returns {{ userID: string, whiteboardID: string, whiteboardName: string }[]}
+ * @returns {Promise<{ userID: string, whiteboardID: string, whiteboardName: string }[]>}
  * List of join requests on the provided whiteboards that the signed in user can accept.
  */
 export async function getPendingJoinRequests(whiteboards) {
@@ -114,18 +114,21 @@ export async function getPendingJoinRequests(whiteboards) {
         }
     }
     
-    const snapshot = await db.collectionGroup('join-requests')
-        .where('whiteboardID', 'in', boardIDs)
-        .get();
-    
-    return snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            whiteboardID: data.whiteboardID,
-            userID: data.userID,
-            whiteboardName: boardNames[data.whiteboardID]
-        };
-    });
+    if (boardIDs.length === 0) return [];
+
+    const snapshots = await Promise.all(
+        boardIDs.map(id =>
+            db.collection('whiteboards').doc(id).collection('join-requests').get()
+        )
+    );
+
+    return snapshots.flatMap((snap, i) =>
+        snap.docs.map(doc => ({
+            whiteboardID: boardIDs[i],
+            userID: doc.data().userID,
+            whiteboardName: boardNames[boardIDs[i]]
+        }))
+    );
 }
 
 /**
