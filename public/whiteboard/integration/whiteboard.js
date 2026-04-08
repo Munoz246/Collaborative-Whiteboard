@@ -13,32 +13,22 @@ import { refreshWhiteboardList } from "../renderer.js";
 import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById } from "../firestore.js";
 import { initNotifications } from "../notifications.js";
 
-const boardParams = new URLSearchParams(window.location.search);
-const activeBoardId = boardParams.get("board")?.trim();
-if (!activeBoardId) {
-  window.location.replace("index.html");
-} else {
-// =============================================================================
-// Startup — connect DOM to whiteboard + overlays
-// =============================================================================
-
 /**
- * @param {import('firebase/auth').User} user
+ * Initializes the whole whiteboard page.
+ * 
+ * @param {import('firebase/auth').User} user Currently signed in user
+ * @param {string} boardID ID of the whiteboard the user is accessing
  */
-async function initIntegratedApp(user) {
+async function initPage(user, boardID) {
   let meta;
   try {
     meta = await getWhiteboardById(activeBoardId);
+    if (!meta) throw Error("Could not load whiteboard");
   } catch (err) {
     console.error(err);
     window.location.replace("index.html");
     return;
   }
-  if (!meta) {
-    window.location.replace("index.html");
-    return;
-  }
-
 
   const titleEl = document.getElementById("boardTitle");
   if (titleEl) titleEl.textContent = meta.name;
@@ -48,6 +38,17 @@ async function initIntegratedApp(user) {
     initNotifications(boards);
   });
 
+  const whiteboard = initWhiteboard();
+
+  initOverlayPanels(boardID);
+}
+
+/**
+ * Initializes WhiteboardModule class and binds UI elements.
+ * 
+ * @returns {WhiteboardModule}
+ */
+function initWhiteboard() {
   const canvasEl = /** @type {HTMLCanvasElement} */ (document.getElementById("whiteboardCanvas"));
   if (!canvasEl) throw new Error("Missing canvas element #whiteboardCanvas");
 
@@ -67,6 +68,16 @@ async function initIntegratedApp(user) {
 
   whiteboard.init();
 
+  return whiteboard;
+}
+
+/**
+ * Binds overlay panels (like whiteboard list, ai chat, etc) to UI elements, and
+ * defines interaction logic.
+ * 
+ * @param {string} boardID Whiteboard ID
+ */
+function initOverlayPanels(boardID) {
   const overlays = new OverlayManager({
     toolbar: new BaseOverlayPanel("whiteboardToolbarOverlay", true),
     boards: new BaseOverlayPanel("boardNavigationOverlay", false),
@@ -79,20 +90,19 @@ async function initIntegratedApp(user) {
   // Bind "create whiteboard" button
   document.getElementById('newBoardBtn').addEventListener('click', onNewBoardClick);
 
+  initAIPanel(boardID);
+}
+
+/**
+ * Handles interaction logic for the AI panel.
+ * 
+ * @param {string} boardID Whiteboard ID
+ */
+function initAIPanel(boardID) {
   // AI assistant UI bindings
   const askBtn = document.getElementById("askAiBtn");
   const promptInput = document.getElementById("aiPromptInput");
   const apiKeyInput = document.getElementById("apiKeyInput");
-
-  let activeWhiteboardId = null;
-
-  // Track selected board
-  document.addEventListener("click", (e) => {
-    const link = e.target.closest("[data-board-id]");
-    if (link) {
-      activeWhiteboardId = link.dataset.boardId;
-    }
-  });
 
   askBtn.addEventListener("click", async () => {
     const prompt = promptInput.value.trim();
@@ -116,7 +126,7 @@ async function initIntegratedApp(user) {
       const boardState = whiteboard?.store?.serialize?.() || {};
 
       const res = await askAI({
-        whiteboardId: activeWhiteboardId,
+        whiteboardId: boardID,
         prompt,
         boardState
       });
@@ -128,14 +138,12 @@ async function initIntegratedApp(user) {
     }
 
     askBtn.disabled = false;
-});
-
+  });
 }
 
-// =============================================================================
-// UI event implementations
-// =============================================================================
-
+/**
+ * Shows whiteboard creation UI and defines whiteboard creation logic.
+ */
 function onNewBoardClick() {
   const newBoardForm = document.getElementById("newBoardForm");
   const newBoardName = /** @type {HTMLInputElement} */ (document.getElementById("newBoardName"));
@@ -174,15 +182,23 @@ function onNewBoardClick() {
   );
 }
 
-// =============================================================================
-// Startup — mount auth UI; app init runs once sign-in is confirmed
-// =============================================================================
-
-try {
-  mountAuthUI({ onSignedIn: initIntegratedApp });
-} catch (err) {
-  console.error(err);
-  alert("Failed to initialize integrated whiteboard: " + err.message);
+/**
+ * Entrypoint for whiteboard.html
+ * 
+ * Ensures a board id is provided and the user is signed in, then initializes
+ * the page.
+ */
+const boardParams = new URLSearchParams(window.location.search);
+const activeBoardId = boardParams.get("board")?.trim();
+if (!activeBoardId) {
+  window.location.replace("index.html");
+} else {
+  try {
+    mountAuthUI({ onSignedIn: (user) => {
+      initPage(user, activeBoardId);
+    } });
+  } catch (err) {
+    console.error(err);
+    alert("Failed to initialize integrated whiteboard: " + err.message);
+  }
 }
-
-} // activeBoardId
