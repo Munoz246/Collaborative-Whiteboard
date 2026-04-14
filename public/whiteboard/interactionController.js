@@ -257,8 +257,14 @@ export class InteractionController {
   }
 
   clearAll() {
-    this.store.clear();
-    this.renderer.clearCanvas();
+    // Keep locked elements intact so "clear all" does not violate lock semantics.
+    const allElements = this.store.getAllElements();
+    const unlockedIds = allElements.filter((el) => !el.isLocked).map((el) => el.id);
+
+    this.store.deleteElements(unlockedIds);
+    for (const id of unlockedIds) {
+      this.renderer.removeElementFromCanvas(id);
+    }
     this.canvas.discardActiveObject();
     this.canvas.requestRenderAll();
 
@@ -291,14 +297,15 @@ export class InteractionController {
 
     if (elementIds.length === 0) return false;
 
-    for (const id of elementIds) {
+    const unlockedIds = elementIds.filter((id) => !this.store.getElement(id)?.isLocked);
+    for (const id of unlockedIds) {
       this.store.deleteElement(id);
       this.renderer.removeElementFromCanvas(id);
     }
 
     this.canvas.discardActiveObject();
     this.canvas.requestRenderAll();
-    return true;
+    return unlockedIds.length > 0;
   }
 
   // =============================================================================
@@ -635,7 +642,7 @@ export class InteractionController {
         strokeWidth: 4,
       },
       content: {},
-    });
+    }, { persist: false });
 
     const selectable = false; // while drawing, we don't want selection fighting controls
     this.renderer.addElementToCanvas(element, { selectable });
@@ -688,7 +695,7 @@ export class InteractionController {
     const h = obj.getScaledHeight();
     // If the drag was too small, treat it as a click and remove the object.
     if (w < 5 || h < 5) {
-      this.store.deleteElement(elementId);
+      this.store.deleteElement(elementId, { persist: false });
       this.renderer.removeElementFromCanvas(elementId);
       this.shapeElementId = null;
       return;
@@ -722,7 +729,7 @@ export class InteractionController {
         points: [{ x: 0, y: 0 }],
         closed: false,
       },
-    });
+    }, { persist: false });
 
     // We'll update left/top + points as the stroke grows so coordinates stay stable.
     const selectable = false;
@@ -789,7 +796,7 @@ export class InteractionController {
     // Local-only heuristic: require some minimal stroke travel.
     if (this.pathPointsAbs.length < 2 || strokeLen < 5) {
       // Too small stroke.
-      this.store.deleteElement(elementId);
+      this.store.deleteElement(elementId, { persist: false });
       this.renderer.removeElementFromCanvas(elementId);
       this.pathPointsAbs = [];
       return;

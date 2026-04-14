@@ -28,6 +28,7 @@ export class WhiteboardModule {
     this.controller = null;
     this.resizeObserver = null;
     this.isInitialized = false;
+    this.disposeCallbacks = [];
 
     this._onWindowResize = this.resize.bind(this);
   }
@@ -98,6 +99,8 @@ export class WhiteboardModule {
 
     this.resizeObserver?.disconnect();
     window.removeEventListener("resize", this._onWindowResize);
+    for (const dispose of this.disposeCallbacks) dispose();
+    this.disposeCallbacks = [];
     this.controller?.destroy?.();
     this.renderer?.destroy?.();
     this.canvas?.dispose?.();
@@ -108,5 +111,9 @@ export class WhiteboardModule {
     this.store = null;
     this.canvas = null;
     this.isInitialized = false;
+  }
+
+  registerDisposer(disposeFn) {
+    if (typeof disposeFn === "function") this.disposeCallbacks.push(disposeFn);
   }
 }

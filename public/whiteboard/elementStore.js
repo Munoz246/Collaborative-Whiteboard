@@ -24,10 +24,28 @@ export class ElementStore {
   constructor() {
     /** @type {Map<string, any>} */
     this.elementsById = new Map();
+    /** @type {Set<(event: any) => void>} */
+    this.subscribers = new Set();
   }
 
-  clear() {
+  subscribe(listener) {
+    this.subscribers.add(listener);
+    return () => this.subscribers.delete(listener);
+  }
+
+  emit(event) {
+    for (const listener of this.subscribers) listener(event);
+  }
+
+  clear(options = {}) {
+    const elementIds = Array.from(this.elementsById.keys());
     this.elementsById.clear();
+    this.emit({
+      kind: "cleared",
+      elementIds,
+      origin: options.origin ?? "local",
+      persist: options.persist ?? true,
+    });
   }
 
   /**
@@ -46,7 +64,7 @@ export class ElementStore {
    * @param {any} element
    * @returns {any} the stored element reference
    */
-  addElement(element) {
+  addElement(element, options = {}) {
     const id = element.id || this.createId();
     const stored = {
       id,
@@ -54,10 +72,18 @@ export class ElementStore {
       position: { x: element.position?.x ?? 0, y: element.position?.y ?? 0 },
       size: { w: element.size?.w ?? 1, h: element.size?.h ?? 1 },
       rotation: element.rotation ?? 0,
+      isLocked: !!element.isLocked,
       style: element.style ? { ...element.style } : {},
       content: element.content ? { ...element.content } : {},
     };
     this.elementsById.set(id, stored);
+    this.emit({
+      kind: "added",
+      elementId: id,
+      element: stored,
+      origin: options.origin ?? "local",
+      persist: options.persist ?? true,
+    });
     return stored;
   }
 
@@ -69,7 +95,7 @@ export class ElementStore {
    * @param {string} id
    * @param {any} patch
    */
-  updateElement(id, patch) {
+  updateElement(id, patch, options = {}) {
     const current = this.elementsById.get(id);
     if (!current) return;
 
@@ -77,6 +103,7 @@ export class ElementStore {
       ...current,
       type: patch.type ?? current.type,
       rotation: patch.rotation ?? current.rotation,
+      isLocked: patch.isLocked ?? current.isLocked,
       position: patch.position ? deepMergeShallow(current.position, patch.position) : current.position,
       size: patch.size ? deepMergeShallow(current.size, patch.size) : current.size,
       style: patch.style ? deepMergeShallow(current.style, patch.style) : current.style,
@@ -84,17 +111,35 @@ export class ElementStore {
     };
 
     this.elementsById.set(id, next);
+    this.emit({
+      kind: "updated",
+      elementId: id,
+      element: next,
+      previous: current,
+      patch,
+      origin: options.origin ?? "local",
+      persist: options.persist ?? true,
+    });
   }
 
-  deleteElement(id) {
+  deleteElement(id, options = {}) {
+    const previous = this.elementsById.get(id);
+    if (!previous) return;
     this.elementsById.delete(id);
+    this.emit({
+      kind: "removed",
+      elementId: id,
+      previous,
+      origin: options.origin ?? "local",
+      persist: options.persist ?? true,
+    });
   }
 
   /**
    * @param {string[]} ids
    */
-  deleteElements(ids) {
-    for (const id of ids) this.elementsById.delete(id);
+  deleteElements(ids, options = {}) {
+    for (const id of ids) this.deleteElement(id, options);
   }
 
   /**
@@ -126,10 +171,35 @@ export class ElementStore {
     const nextElements = serialized?.elements;
     if (!Array.isArray(nextElements)) return;
 
-    this.clear();
+    this.clear({ origin: "remote", persist: false });
     for (const el of nextElements) {
       // Keep provided ids for backend sync.
-      this.addElement(el);
+      this.addElement(el, { origin: "remote", persist: false });
     }
+  }
+
+  upsertRemoteElement(element) {
+    const existing = this.getElement(element.id);
+    if (!existing) {
+      this.addElement(element, { origin: "remote", persist: false });
+      return;
+    }
+    this.updateElement(
+      element.id,
+      {
+        type: element.type,
+        position: element.position,
+        size: element.size,
+        rotation: element.rotation,
+        style: element.style,
+        content: element.content,
+        isLocked: element.isLocked,
+      },
+      { origin: "remote", persist: false },
+    );
+  }
+
+  removeRemoteElement(id) {
+    this.deleteElement(id, { origin: "remote", persist: false });
   }
 }
