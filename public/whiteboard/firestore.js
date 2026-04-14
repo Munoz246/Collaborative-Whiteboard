@@ -22,7 +22,7 @@ export async function createWhiteboard(userID, name) {
     await newWB.set({
         name,
         members: [ userID ],
-        modss: [],
+        mods: [],
         owner: userID,
         pendingRequests: false
     });

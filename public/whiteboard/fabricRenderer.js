@@ -98,7 +98,7 @@ export class FabricRenderer {
    * Create + add a new Fabric object for a store element.
    */
   addElementToCanvas(element, { selectable = false } = {}) {
-    const obj = this.createFabricObject(element, selectable);
+    const obj = this.createFabricObject(element, selectable && !element.isLocked);
     this.fabricById.set(element.id, obj);
     this.canvas.add(obj);
     this.canvas.requestRenderAll();
@@ -113,6 +113,10 @@ export class FabricRenderer {
     this.canvas.requestRenderAll();
   }
 
+  removeByElementId(elementId) {
+    this.removeElementFromCanvas(elementId);
+  }
+
   clearCanvas() {
     this.fabricById.clear();
     this.canvas.clear();
@@ -124,11 +128,25 @@ export class FabricRenderer {
    */
   setAllSelectable(selectable) {
     for (const obj of this.fabricById.values()) {
-      obj.set({ selectable, evented: selectable });
+      const elementId = obj.__elementId;
+      const element = this.store.getElement(elementId);
+      const canSelect = selectable && !element?.isLocked;
+      obj.set({ selectable: canSelect, evented: canSelect });
       // Controls/borders are drawn only when selected; safe to keep enabled.
       obj.setCoords();
     }
     this.canvas.requestRenderAll();
+  }
+
+  upsertFromStoreElement(element) {
+    const selectable = !this.canvas.skipTargetFind;
+    const existing = this.getFabricObject(element.id);
+    if (!existing) {
+      this.addElementToCanvas(element, { selectable });
+      return;
+    }
+    this.removeElementFromCanvas(element.id);
+    this.addElementToCanvas(element, { selectable });
   }
 
   // =============================================================================
@@ -206,6 +224,15 @@ export class FabricRenderer {
         objectCaching: false,
       });
       setCommonControls(obj);
+    } else if (element.type === "file") {
+      obj = new fabric.Textbox(element.content?.fileName || "File", {
+        ...common,
+        width: element.size.w || 180,
+        fill: "#111827",
+        fontSize: 16,
+        editable: false,
+      });
+      setCommonControls(obj);
     } else {
       throw new Error("Unsupported element type: " + element.type);
     }
@@ -227,6 +254,17 @@ export class FabricRenderer {
 
     const element = this.store.getElement(elementId);
     if (!element) return;
+    if (element.isLocked) {
+      // Locked items should never be transformed locally.
+      obj.set({
+        left: element.position?.x ?? obj.left ?? 0,
+        top: element.position?.y ?? obj.top ?? 0,
+        angle: element.rotation ?? obj.angle ?? 0,
+      });
+      obj.setCoords();
+      this.canvas.requestRenderAll();
+      return;
+    }
 
     const nextRotation = obj.angle ?? 0;
     const nextPos = { x: obj.left ?? 0, y: obj.top ?? 0 };
@@ -279,7 +317,15 @@ export class FabricRenderer {
       nextStyle.stroke = obj.stroke;
       nextStyle.strokeWidth = obj.strokeWidth;
       nextStyle.fill = obj.fill;
-      // For pen paths, keep scale as-is (points remain local), only serialize effective size.
+      // For pen paths, use geometry-only dimensions (width/height * scale),
+      // not getScaledWidth/getScaledHeight, because those include stroke width.
+      // Including stroke width causes additive growth on every move-sync cycle.
+      const geomW = (obj.width ?? 1) * (obj.scaleX ?? 1);
+      const geomH = (obj.height ?? 1) * (obj.scaleY ?? 1);
+      nextSize = {
+        w: Math.max(1, geomW),
+        h: Math.max(1, geomH),
+      };
     }
 
     this.store.updateElement(elementId, {

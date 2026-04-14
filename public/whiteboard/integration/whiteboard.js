@@ -12,6 +12,9 @@ import { currentUser, mountAuthUI } from "../auth.js";
 import { refreshWhiteboardList } from "../renderer.js";
 import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById, requestToJoinWhiteboard, addUserToWhiteboard } from "../firestore.js";
 import { initNotifications } from "../notifications.js";
+import { createItem, deleteItem, subscribeToItems, updateItem } from "../itemSyncService.js";
+
+let activeWhiteboard = null;
 
 /**
  * Initializes the whole whiteboard page.
@@ -45,8 +48,72 @@ async function initPage(user, boardID) {
   });
 
   const whiteboard = initWhiteboard();
+  activeWhiteboard = whiteboard;
+  attachRealtimeItemSync(whiteboard, boardID, user.uid);
 
   initOverlayPanels(boardID, user, meta);
+}
+
+function attachRealtimeItemSync(whiteboard, boardID, userId) {
+  let isApplyingRemote = false;
+
+  const unsubscribeRemote = subscribeToItems(boardID, {
+    onAdded: (item) => {
+      isApplyingRemote = true;
+      try {
+        whiteboard.store.upsertRemoteElement(item);
+        const synced = whiteboard.store.getElement(item.id);
+        if (synced) whiteboard.renderer.upsertFromStoreElement(synced);
+      } finally {
+        isApplyingRemote = false;
+      }
+    },
+    onModified: (item) => {
+      isApplyingRemote = true;
+      try {
+        whiteboard.store.upsertRemoteElement(item);
+        const synced = whiteboard.store.getElement(item.id);
+        if (synced) whiteboard.renderer.upsertFromStoreElement(synced);
+      } finally {
+        isApplyingRemote = false;
+      }
+    },
+    onRemoved: (itemId) => {
+      isApplyingRemote = true;
+      try {
+        whiteboard.store.removeRemoteElement(itemId);
+        whiteboard.renderer.removeByElementId(itemId);
+      } finally {
+        isApplyingRemote = false;
+      }
+    },
+    onError: (err) => console.error("Firestore realtime sync failed:", err),
+  });
+
+  const unsubscribeStore = whiteboard.store.subscribe(async (event) => {
+    if (isApplyingRemote || event.origin === "remote" || !event.persist) return;
+
+    try {
+      if (event.kind === "added") {
+        await createItem(boardID, event.element, userId);
+      } else if (event.kind === "updated") {
+        await updateItem(boardID, event.elementId, event.previous, event.element, userId);
+      } else if (event.kind === "removed") {
+        await deleteItem(boardID, event.elementId);
+      } else if (event.kind === "cleared") {
+        await Promise.all((event.elementIds || []).map((id) => deleteItem(boardID, id)));
+      }
+    } catch (err) {
+      console.error("Failed to sync whiteboard item change:", err);
+    }
+  });
+
+  const dispose = () => {
+    unsubscribeRemote?.();
+    unsubscribeStore?.();
+  };
+  whiteboard.registerDisposer(dispose);
+  window.addEventListener("beforeunload", dispose, { once: true });
 }
 
 /**
@@ -171,7 +238,7 @@ function initAIPanel(boardID) {
       addMessage("user", prompt);
       promptInput.value = "";
 
-      const boardState = whiteboard?.store?.serialize?.() || {};
+      const boardState = activeWhiteboard?.store?.serialize?.() || {};
 
       const res = await askAI({
         whiteboardId: boardID,

@@ -1,0 +1,151 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ---------- Helpers ----------
+    // Basic auth guard used throughout the ruleset.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Reads the parent whiteboard document so nested collections (items/chat/requests)
+    // can reuse membership and role checks.
+    function getWhiteboard(boardId) {
+      return get(/databases/$(database)/documents/whiteboards/$(boardId));
+    }
+
+    // True when the signed-in user is part of whiteboard.members.
+    function isMember(whiteboard) {
+      return isSignedIn() && request.auth.uid in whiteboard.data.members;
+    }
+
+    // True when the signed-in user is listed as a moderator.
+    function isMod(whiteboard) {
+      return isSignedIn() && request.auth.uid in whiteboard.data.mods;
+    }
+
+    // True when the signed-in user is the whiteboard owner.
+    function isOwner(whiteboard) {
+      return isSignedIn() && request.auth.uid == whiteboard.data.owner;
+    }
+
+    // Convenience helper for privileged users.
+    function isOwnerOrMod(whiteboard) {
+      return isOwner(whiteboard) || isMod(whiteboard);
+    }
+
+    // Checks whether an update attempts to modify any keys in `keys`.
+    function affected(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(keys);
+    }
+
+    // Mods cannot demote other mods; they can only remove themselves.
+    function validModEdit() {
+      let removedMods = resource.data.mods.removeAll(request.resource.data.mods);
+      return removedMods.size() == 0 || removedMods == [request.auth.uid];
+    }
+
+    // ---------- User docs ----------
+    // Profile document access: users can only read/write their own record.
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Private nested user data (e.g. secrets/preferences) is also self-only.
+    match /users/{userId}/private/{docId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ---------- Whiteboards ----------
+    match /whiteboards/{boardId} {
+      // Keep whiteboard metadata readable to signed-in users so invite links
+      // can show board info and submit join requests.
+      allow read: if isSignedIn();
+
+      // Create is allowed for authenticated users, but they must set themselves owner.
+      allow create: if isSignedIn()
+        && !exists(/databases/$(database)/documents/whiteboards/$(boardId))
+        && request.resource.data.owner == request.auth.uid;
+
+      // Owners can update anything. Mods can update except owner changes and mod-list
+      // changes that demote other moderators.
+      allow update: if isSignedIn() && (
+        isOwner(resource) || (
+          isMod(resource)
+          && !affected(['owner'])
+          && (!affected(['mods']) || validModEdit())
+        )
+      );
+
+      // Only owners can permanently remove a whiteboard.
+      allow delete: if isSignedIn() && isOwner(resource);
+
+      // Whiteboard canvas items (drawing, notes, shapes, files).
+      match /items/{itemId} {
+        // Members can load items in realtime.
+        allow read: if isMember(getWhiteboard(boardId));
+
+        // Item creation requires expected collaboration metadata and schema fields.
+        allow create: if isMember(getWhiteboard(boardId))
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.type is string
+          && request.resource.data.transform is map
+          && request.resource.data.data is map
+          && request.resource.data.isLocked is bool;
+
+        // Updates must preserve schema and always stamp updatedBy with the caller.
+        // Locked items can only be changed by the locker (updatedBy) or owner/mod.
+        allow update: if isMember(getWhiteboard(boardId))
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.type is string
+          && request.resource.data.transform is map
+          && request.resource.data.data is map
+          && request.resource.data.isLocked is bool
+          && (
+            !resource.data.isLocked
+            || resource.data.updatedBy == request.auth.uid
+            || isOwnerOrMod(getWhiteboard(boardId))
+          );
+
+        // Same lock policy for deletes.
+        allow delete: if isMember(getWhiteboard(boardId))
+          && (
+            !resource.data.isLocked
+            || resource.data.updatedBy == request.auth.uid
+            || isOwnerOrMod(getWhiteboard(boardId))
+          );
+      }
+
+      // Requests from non-members who want to join a whiteboard.
+      match /join-requests/{userId} {
+        // Requesters can create their own join request.
+        allow read: if isOwnerOrMod(getWhiteboard(boardId)) || (isSignedIn() && request.auth.uid == userId);
+        allow create: if isSignedIn() && request.auth.uid == userId;
+        // Privileged users can clear requests; users can remove their own request.
+        allow delete: if isOwnerOrMod(getWhiteboard(boardId)) || (isSignedIn() && request.auth.uid == userId);
+      }
+
+      // Optional membership subcollection support.
+      match /members/{userId} {
+        allow read: if isMember(getWhiteboard(boardId));
+        allow write: if isOwnerOrMod(getWhiteboard(boardId));
+      }
+
+      // Lightweight board chat channel.
+      match /group-chat/{messageId} {
+        allow read: if isMember(getWhiteboard(boardId));
+        // Members can post as themselves with a text message.
+        allow create: if isMember(getWhiteboard(boardId))
+          && request.resource.data.senderID == request.auth.uid
+          && request.resource.data.message is string;
+        // Chat edits/deletes are disallowed for now (simpler moderation model).
+        allow update, delete: if false;
+      }
+    }
+
+    // Default-deny fallback for every path not matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
