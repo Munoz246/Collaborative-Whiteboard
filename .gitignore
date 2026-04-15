@@ -1,4 +1,5 @@
 firebase-debug.log*
+firestore-debug.log*
 .env
 node_modules/
 dist/
