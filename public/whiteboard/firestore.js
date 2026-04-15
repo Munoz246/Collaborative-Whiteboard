@@ -60,7 +60,7 @@ export async function deleteWhiteboard(whiteboardID) {
 export async function getJoinedWhiteboards() {
     console.log('Fetching joined whiteboards...');
 
-    const uid = currentUser().uid;
+    const uid = currentUser()?.uid;
     if (!uid) throw Error('User not signed in');
 
     const snapshot = await db.collection('whiteboards')
@@ -246,7 +246,7 @@ export async function leaveWhiteboard(whiteboardID) {
     if (!wb) throw Error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
 
     const payload = {
-        members: wb.members.filter(uid => user.uid) // Remove self from member list
+        members: wb.members.filter(uid => (uid !== user.uid)) // Remove self from member list
     };
 
     // Handle case where the user owns the whiteboard
