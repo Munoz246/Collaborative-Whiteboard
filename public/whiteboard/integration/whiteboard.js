@@ -55,6 +55,10 @@ async function initPage(user, boardID) {
 }
 
 function attachRealtimeItemSync(whiteboard, boardID, userId) {
+  if (typeof whiteboard.__realtimeSyncDispose === "function") {
+    whiteboard.__realtimeSyncDispose();
+    whiteboard.__realtimeSyncDispose = null;
+  }
   let isApplyingRemote = false;
 
   const unsubscribeRemote = subscribeToItems(boardID, {
@@ -69,6 +73,9 @@ function attachRealtimeItemSync(whiteboard, boardID, userId) {
       }
     },
     onModified: (item) => {
+      if (item?.updatedBy === userId) {
+        return;
+      }
       isApplyingRemote = true;
       try {
         whiteboard.store.upsertRemoteElement(item);
@@ -112,6 +119,7 @@ function attachRealtimeItemSync(whiteboard, boardID, userId) {
     unsubscribeRemote?.();
     unsubscribeStore?.();
   };
+  whiteboard.__realtimeSyncDispose = dispose;
   whiteboard.registerDisposer(dispose);
   window.addEventListener("beforeunload", dispose, { once: true });
 }

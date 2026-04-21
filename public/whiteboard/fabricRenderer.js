@@ -63,12 +63,72 @@ export class FabricRenderer {
     this.store = store;
     /** @type {Map<string, fabric.Object>} */
     this.fabricById = new Map();
-
     this._onObjectModified = (evt) => {
       const obj = evt.target;
       if (!obj) return;
       const elementId = obj.__elementId;
-      if (!elementId) return;
+      if (!elementId) {
+        if (obj.type === "activeSelection" && typeof obj.getObjects === "function") {
+          const selectionObjects = obj.getObjects();
+          // Keep grouped transforms rigid by applying one shared delta to all children.
+          const childSamples = [];
+          for (const childObj of selectionObjects) {
+            const childId = childObj?.__elementId;
+            if (!childId) continue;
+            const fabric = globalThis.fabric;
+            const matrix = typeof childObj.calcTransformMatrix === "function" ? childObj.calcTransformMatrix() : null;
+            const pathOffsetX = childObj?.pathOffset?.x ?? ((childObj?.width ?? 0) / 2);
+            const pathOffsetY = childObj?.pathOffset?.y ?? ((childObj?.height ?? 0) / 2);
+            const localPoint = fabric?.Point ? new fabric.Point(-pathOffsetX, -pathOffsetY) : null;
+            const worldPoint = (matrix && localPoint && fabric?.util?.transformPoint)
+              ? fabric.util.transformPoint(localPoint, matrix)
+              : null;
+            const absoluteOrigin = worldPoint ? { x: worldPoint.x, y: worldPoint.y } : null;
+            const storeElement = this.store?.getElement?.(childId);
+            const prevPos = storeElement?.position ?? null;
+            const computedDelta = (prevPos && absoluteOrigin)
+              ? {
+                dx: absoluteOrigin.x - (prevPos.x ?? 0),
+                dy: absoluteOrigin.y - (prevPos.y ?? 0),
+              }
+              : null;
+            childSamples.push({
+              childId,
+              prevPos,
+              absoluteOrigin,
+              computedDelta,
+            });
+          }
+          const deltaSamples = childSamples
+            .map((s) => s.computedDelta)
+            .filter((d) => d && Number.isFinite(d.dx) && Number.isFinite(d.dy));
+          const sharedDelta = deltaSamples.length
+            ? {
+              dx: deltaSamples.reduce((sum, d) => sum + d.dx, 0) / deltaSamples.length,
+              dy: deltaSamples.reduce((sum, d) => sum + d.dy, 0) / deltaSamples.length,
+            }
+            : null;
+          for (const sample of childSamples) {
+            const {
+              childId,
+              prevPos,
+              absoluteOrigin,
+              computedDelta,
+            } = sample;
+            const appliedPos = (prevPos && sharedDelta)
+              ? {
+                x: (prevPos.x ?? 0) + sharedDelta.dx,
+                y: (prevPos.y ?? 0) + sharedDelta.dy,
+              }
+              : absoluteOrigin;
+            this.syncElementFromFabricObject(childId, {
+              absolutePosition: appliedPos ? { x: appliedPos.x, y: appliedPos.y } : null,
+            });
+          }
+          return;
+        }
+        return;
+      }
       this.syncElementFromFabricObject(elementId);
     };
 
@@ -248,7 +308,7 @@ export class FabricRenderer {
   /**
    * Update the store element to match the current Fabric object transform.
    */
-  syncElementFromFabricObject(elementId) {
+  syncElementFromFabricObject(elementId, options = {}) {
     const obj = this.fabricById.get(elementId);
     if (!obj) return;
 
@@ -267,7 +327,9 @@ export class FabricRenderer {
     }
 
     const nextRotation = obj.angle ?? 0;
-    const nextPos = { x: obj.left ?? 0, y: obj.top ?? 0 };
+    const nextPos = options.absolutePosition
+      ? { x: options.absolutePosition.x, y: options.absolutePosition.y }
+      : { x: obj.left ?? 0, y: obj.top ?? 0 };
     let nextSize = { w: obj.getScaledWidth(), h: obj.getScaledHeight() };
 
     const nextStyle = { ...(element.style || {}) };
@@ -277,6 +339,11 @@ export class FabricRenderer {
       nextStyle.fill = obj.fill;
       nextStyle.stroke = obj.stroke;
       nextStyle.strokeWidth = obj.strokeWidth;
+      // Persist geometry-only dimensions so pure drag operations don't inflate
+      // size from stroke-inclusive bounds on repeated group updates.
+      const geomW = (obj.width ?? 1) * (obj.scaleX ?? 1);
+      const geomH = (obj.height ?? 1) * (obj.scaleY ?? 1);
+      nextSize = { w: Math.max(1, geomW), h: Math.max(1, geomH) };
       // Normalize scale so the stored size matches shape geometry.
       obj.set({
         width: nextSize.w,
@@ -289,8 +356,10 @@ export class FabricRenderer {
       nextStyle.fill = obj.fill;
       nextStyle.stroke = obj.stroke;
       nextStyle.strokeWidth = obj.strokeWidth;
+      const diameter = Math.max(1, (obj.radius ?? 1) * 2 * (obj.scaleX ?? 1));
+      nextSize = { w: diameter, h: diameter };
       obj.set({
-        radius: Math.max(1, nextSize.w / 2),
+        radius: diameter / 2,
         scaleX: 1,
         scaleY: 1,
       });
