@@ -123,8 +123,15 @@ exports.askWhiteboardAssistant = onRequest(
         throw new Error("Missing prompt");
       }
 
-      const memberDoc = await db.doc(`whiteboards/${whiteboardId}/members/${user.uid}`).get();
-      if (!memberDoc.exists) {
+      const boardDoc = await db.doc(`whiteboards/${whiteboardId}`).get();
+
+      if (!boardDoc.exists) {
+        throw new Error("Whiteboard not found");
+      }
+
+      const boardData = boardDoc.data();
+
+      if (!boardData.members?.includes(user.uid)) {
         throw new Error("You are not a member of this whiteboard");
       }
 

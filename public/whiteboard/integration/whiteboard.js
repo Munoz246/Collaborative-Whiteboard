@@ -25,7 +25,7 @@ let activeWhiteboard = null;
 async function initPage(user, boardID) {
   let meta;
   try {
-    meta = await getWhiteboardById(activeBoardId);
+    meta = await getWhiteboardById(boardID);
     if (!meta) throw Error("Could not load whiteboard");
   } catch (err) {
     console.error(err);
