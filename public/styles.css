@@ -536,6 +536,97 @@ body {
   background: rgba(0, 0, 0, 0.06);
 }
 
+/* ---- Group chat (Firestore-backed HUD panel) ---- */
+.hud-chat-panel-body {
+  min-height: 0;
+  max-height: min(70vh, 520px);
+}
+
+.hud-chat-panel-body .hud-chat-list {
+  max-height: min(42vh, 360px);
+  min-height: 120px;
+  scroll-behavior: smooth;
+}
+
+.chat-status {
+  color: #6b7280;
+}
+
+.chat-status--error {
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.chat-retry-btn,
+.chat-load-older-btn {
+  align-self: flex-start;
+}
+
+.hud-chat-row {
+  list-style: none;
+  margin-bottom: 10px;
+}
+
+.chat-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+  font-size: 0.72rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.chat-row__who {
+  font-weight: 600;
+  color: #374151;
+}
+
+.chat-row__body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-row--mine .chat-row__body {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.chat-row__body--removed {
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.chat-row__edited {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.chat-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 6px;
+}
+
+.chat-row__action-btn {
+  font-size: 0.75rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.chat-row__action-btn:hover {
+  color: #1d4ed8;
+}
+
+.chat-row__edit-input {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
 .hud-ai-messages.ai-messages {
   flex: none;
   min-height: 100px;

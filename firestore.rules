@@ -44,6 +44,80 @@ service cloud.firestore {
       return removedMods.size() == 0 || removedMods == [request.auth.uid];
     }
 
+    // ---------- Group chat (whiteboards/{boardId}/group-chat) ----------
+    function groupChatBoard(boardId) {
+      return getWhiteboard(boardId);
+    }
+
+    function validGroupChatCreate(boardId) {
+      let wb = groupChatBoard(boardId);
+      return isMember(wb)
+        && request.resource.data.keys().hasOnly([
+          'senderId', 'senderDisplayName', 'message', 'createdAt', 'updatedAt', 'edited', 'hidden'
+        ])
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.senderDisplayName is string
+        && request.resource.data.senderDisplayName.size() <= 200
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 4000
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.edited == false
+        && request.resource.data.hidden == false;
+    }
+
+    // Author edits their own visible message: text + server updatedAt (edited may already be true).
+    function groupChatAuthorEdit(boardId) {
+      let diffKeys = request.resource.data.diff(resource.data).affectedKeys();
+      let diffOk = diffKeys.hasOnly(['message', 'edited', 'updatedAt'])
+        || diffKeys.hasOnly(['message', 'updatedAt']);
+      return isMember(groupChatBoard(boardId))
+        && resource.data.senderId == request.auth.uid
+        && resource.data.hidden == false
+        && request.resource.data.senderId == resource.data.senderId
+        && request.resource.data.hidden == false
+        && request.resource.data.createdAt == resource.data.createdAt
+        && diffOk
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 4000
+        && request.resource.data.edited == true
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    // Author soft-retracts their own message (no hiddenBy).
+    function groupChatAuthorRetract(boardId) {
+      let diffKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return isMember(groupChatBoard(boardId))
+        && resource.data.senderId == request.auth.uid
+        && resource.data.hidden == false
+        && request.resource.data.senderId == resource.data.senderId
+        && request.resource.data.hidden == true
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.message == resource.data.message
+        && request.resource.data.edited == resource.data.edited
+        && diffKeys.hasOnly(['hidden', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    // Owner/mod hides any message; records moderator uid in hiddenBy.
+    function groupChatModHide(boardId) {
+      let wb = groupChatBoard(boardId);
+      let diffKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return isMember(wb)
+        && isOwnerOrMod(wb)
+        && resource.data.hidden == false
+        && request.resource.data.hidden == true
+        && request.resource.data.hiddenBy == request.auth.uid
+        && request.resource.data.senderId == resource.data.senderId
+        && request.resource.data.message == resource.data.message
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.edited == resource.data.edited
+        && diffKeys.hasOnly(['hidden', 'hiddenBy', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time;
+    }
+
     // ---------- User docs ----------
     // Profile document access: users can only read/write their own record.
     match /users/{userId} {
@@ -131,15 +205,14 @@ service cloud.firestore {
         allow write: if isOwnerOrMod(getWhiteboard(boardId));
       }
 
-      // Lightweight board chat channel.
+      // Per-board group chat; members read/write per rules below (no hard deletes).
       match /group-chat/{messageId} {
         allow read: if isMember(getWhiteboard(boardId));
-        // Members can post as themselves with a text message.
-        allow create: if isMember(getWhiteboard(boardId))
-          && request.resource.data.senderID == request.auth.uid
-          && request.resource.data.message is string;
-        // Chat edits/deletes are disallowed for now (simpler moderation model).
-        allow update, delete: if false;
+        allow create: if validGroupChatCreate(boardId);
+        allow update: if groupChatAuthorEdit(boardId)
+          || groupChatAuthorRetract(boardId)
+          || groupChatModHide(boardId);
+        allow delete: if false;
       }
     }
 
