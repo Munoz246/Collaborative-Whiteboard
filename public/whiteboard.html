@@ -202,13 +202,15 @@
             <h2 class="hud-panel__title">Group Chat</h2>
             <button type="button" class="hud-panel-close" data-overlay-close="groupChat" aria-label="Close chat">×</button>
           </header>
-          <div class="hud-panel__body d-flex flex-column gap-2">
-            <ul id="chatList" class="chat-list hud-chat-list mb-0">
-              <li class="hud-chat-bubble">Hi!</li>
-              <li class="hud-chat-bubble">Hello!</li>
-            </ul>
+          <div class="hud-panel__body d-flex flex-column gap-2 hud-chat-panel-body">
+            <p id="chatStatus" class="chat-status small mb-0" role="status" aria-live="polite"></p>
+            <button id="chatRetryBtn" type="button" class="btn btn-sm btn-outline-secondary chat-retry-btn" hidden>Retry</button>
+            <button id="chatLoadOlderBtn" type="button" class="btn btn-sm btn-outline-secondary chat-load-older-btn" hidden>
+              Load older messages
+            </button>
+            <ul id="chatList" class="chat-list hud-chat-list mb-0" aria-label="Group chat messages"></ul>
             <div class="input-group hud-input-group">
-              <input id="chatInput" class="form-control hud-input" type="text" placeholder="Your message…" />
+              <input id="chatInput" class="form-control hud-input" type="text" placeholder="Your message…" maxlength="4000" />
               <button id="sendChatBtn" class="btn btn-dark hud-send-btn" type="button" aria-label="Send message">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />

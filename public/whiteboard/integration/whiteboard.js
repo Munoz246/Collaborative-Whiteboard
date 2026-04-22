@@ -13,6 +13,7 @@ import { refreshWhiteboardList } from "../renderer.js";
 import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById, requestToJoinWhiteboard, addUserToWhiteboard } from "../firestore.js";
 import { initNotifications } from "../notifications.js";
 import { createItem, deleteItem, subscribeToItems, updateItem } from "../itemSyncService.js";
+import { mountGroupChatPanel } from "../groupChatPanel.js";
 
 let activeWhiteboard = null;
 
@@ -50,6 +51,13 @@ async function initPage(user, boardID) {
   const whiteboard = initWhiteboard();
   activeWhiteboard = whiteboard;
   attachRealtimeItemSync(whiteboard, boardID, user.uid);
+
+  mountGroupChatPanel({
+    boardId: boardID,
+    user,
+    meta,
+    registerDisposer: (fn) => whiteboard.registerDisposer(fn),
+  });
 
   initOverlayPanels(boardID, user, meta);
 }
