@@ -33,15 +33,25 @@ service cloud.firestore {
       return isOwner(whiteboard) || isMod(whiteboard);
     }
 
-    // Checks whether an update attempts to modify any keys in `keys`.
-    function affected(keys) {
+    // Returns true if any provided keys are being modified
+    function affectedAny(keys) {
       return request.resource.data.diff(resource.data).affectedKeys().hasAny(keys);
+    }
+
+    // Returns true if only the provided keys are being modified
+    function affectedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
     }
 
     // Mods cannot demote other mods; they can only remove themselves.
     function validModEdit() {
       let removedMods = resource.data.mods.removeAll(request.resource.data.mods);
       return removedMods.size() == 0 || removedMods == [request.auth.uid];
+    }
+
+    function leavingWhiteboard(resource) {
+      let removedMembers = resource.data.members.removeAll(request.resource.data.members);
+      return removedMembers == [request.auth.uid];
     }
 
     // ---------- Group chat (whiteboards/{boardId}/group-chat) ----------
@@ -145,8 +155,12 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         isOwner(resource) || (
           isMod(resource)
-          && !affected(['owner'])
-          && (!affected(['mods']) || validModEdit())
+          && !affectedAny(['owner'])
+          && (!affectedAny(['mods']) || validModEdit())
+        ) || (
+          isMember(resource)
+          && affectedOnly(['members'])
+          && leavingWhiteboard(resource)
         )
       );
 

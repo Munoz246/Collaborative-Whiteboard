@@ -40,22 +40,35 @@
 </head>
 <body>
   <main class="integrated-app">
+    
+    <!-- Whiteboard Canvas -->
     <div class="whiteboard-layer" aria-hidden="true">
       <canvas id="whiteboardCanvas"></canvas>
     </div>
 
+    <!-- Overlays (panels, tools, settings, etc) -->
     <div class="overlay-layer hud-root" role="application" aria-label="Whiteboard workspace">
       <div class="hud-cluster hud-cluster--left overlay-item">
+        
+        <!-- Return to Dashboard Button -->
         <a href="index.html" class="hud-icon-btn hud-icon-btn--round" title="Dashboard" aria-label="Back to dashboard">
           <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </a>
+        
+        <!-- Whiteboard title -->
         <div class="hud-title-pill">
-          <h1 id="boardTitle" class="hud-title-text">Whiteboard Workspace</h1>
+          <h1 id="boardTitle" class="hud-title-text">Loading...</h1>
+          <button id="boardTitleSettingsBtn" type="button" class="hud-title-caret" title="Whiteboard settings" aria-label="Whiteboard settings" aria-haspopup="menu" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+            </svg>
+          </button>
         </div>
       </div>
 
+      <!-- Panel buttons -->
       <div class="hud-cluster hud-cluster--center overlay-item" role="toolbar" aria-label="Quick panels">
         <button type="button" class="hud-icon-btn hud-icon-btn--round" data-overlay-target="boards" title="Whiteboards" aria-label="Toggle whiteboards list">
           <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -89,6 +102,8 @@
       </div>
 
       <div class="hud-cluster hud-cluster--right overlay-item">
+        
+        <!-- Notification button -->
         <div class="notif-anchor">
           <button id="notifBtn" type="button" class="hud-icon-btn hud-icon-btn--round" title="Notifications" aria-label="Notifications">
             <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -103,6 +118,8 @@
             <p id="notifEmpty" class="notif-empty">No pending requests.</p>
           </div>
         </div>
+
+        <!-- Account button -->
         <button id="profileBtn" type="button" class="hud-icon-btn hud-icon-btn--round" title="Sign in" aria-label="Sign in">
           <img id="profilePhoto" class="profile-photo" src="" alt="" aria-hidden="true" />
           <svg id="profileIcon" class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -110,14 +127,9 @@
             <circle cx="12" cy="7" r="4" />
           </svg>
         </button>
-        <button type="button" class="hud-icon-btn hud-icon-btn--round" title="Settings" aria-label="Settings (coming soon)">
-          <svg class="hud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-          </svg>
-        </button>
       </div>
 
+      <!-- Whiteboard toolbar -->
       <section
         id="whiteboardToolbarOverlay"
         class="overlay-panel hud-toolbar-dock is-open overlay-item"
@@ -163,6 +175,7 @@
         </div>
       </section>
 
+      <!-- Whiteboard list panel -->
       <section
         id="boardNavigationOverlay"
         class="overlay-panel hud-panel hud-panel--top-left is-closed overlay-item"
@@ -192,6 +205,7 @@
         </div>
       </section>
 
+      <!-- Group chat panel -->
       <section
         id="groupChatOverlay"
         class="overlay-panel hud-panel hud-panel--bottom-left is-closed overlay-item"
@@ -221,6 +235,7 @@
         </div>
       </section>
 
+      <!-- AI chat panel -->
       <section
         id="aiChatOverlay"
         class="overlay-panel hud-panel hud-panel--top-right is-closed overlay-item"
@@ -251,6 +266,7 @@
         </div>
       </section>
 
+      <!-- File manager panel -->
       <section
         id="fileManagerOverlay"
         class="overlay-panel hud-panel hud-panel--bottom-right is-closed overlay-item"
@@ -275,6 +291,7 @@
 
     </div>
 
+    <!-- Share Modal -->
     <div id="shareModal" class="login-screen" hidden aria-modal="true" role="dialog" aria-labelledby="shareModalTitle">
       <div class="login-card hud-glass" style="width:min(440px,calc(100vw - 40px));text-align:left">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -315,6 +332,7 @@
       </div>
     </div>
 
+    <!-- Join Request Modal -->
     <div id="joinRequestModal" class="login-screen" hidden aria-modal="true" role="dialog" aria-labelledby="joinRequestTitle">
       <div class="login-card hud-glass">
         <h2 id="joinRequestTitle" class="login-title" style="font-size:1.25rem">Request to Join Whiteboard</h2>
@@ -327,6 +345,7 @@
       </div>
     </div>
 
+    <!-- Login Screen -->
     <div id="loginScreen" class="login-screen is-hidden" aria-modal="true" role="dialog" aria-label="Sign in" aria-hidden="true">
       <div class="login-card hud-glass">
         <svg class="login-logo" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">

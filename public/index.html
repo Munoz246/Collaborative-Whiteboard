@@ -32,10 +32,15 @@
 <body class="dashboard-page">
   <main class="dashboard-layout" aria-label="Whiteboards dashboard">
     <header class="dashboard-header">
+      
+      <!-- Page title -->
       <div class="dashboard-title-pill">
         <h1 class="dashboard-title">Your Whiteboards</h1>
       </div>
+
       <div class="dashboard-header-actions" aria-label="User actions">
+        
+        <!-- Notification dropdown -->
         <div class="notif-anchor">
           <button id="notifBtn" type="button" class="dashboard-icon-btn" title="Notifications" aria-label="Notifications">
             <svg class="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -50,6 +55,8 @@
             <p id="notifEmpty" class="notif-empty">No pending requests.</p>
           </div>
         </div>
+
+        <!-- Profile button -->
         <button id="profileBtn" type="button" class="dashboard-icon-btn" title="Sign in" aria-label="Sign in">
           <img id="profilePhoto" class="dashboard-profile-photo" src="" alt="" aria-hidden="true" />
           <svg id="profileIcon" class="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -57,24 +64,21 @@
             <circle cx="12" cy="7" r="4" />
           </svg>
         </button>
-        <button type="button" class="dashboard-icon-btn" title="Settings" aria-label="Settings (coming soon)">
-          <svg class="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-          </svg>
-        </button>
       </div>
     </header>
 
+    <!-- Create/join whiteboard buttons -->
     <section class="dashboard-cta-row" aria-label="Primary whiteboard actions">
       <button id="dashboardCreateBtn" type="button" class="dashboard-cta-btn">Create Whiteboard</button>
       <button id="dashboardJoinBtn" type="button" class="dashboard-cta-btn">Join Whiteboard</button>
     </section>
 
+    <!-- Whiteboard list container -->
     <p id="dashboardEmptyState" class="dashboard-empty-state" hidden>You have no whiteboards yet.</p>
     <div id="dashboardBoardsMount" class="dashboard-board-list"></div>
   </main>
 
+  <!-- Create dashboard modal -->
   <div id="dashboardCreateModal" class="dashboard-modal-root" hidden aria-hidden="true">
     <div class="dashboard-modal-scrim" data-dashboard-modal-dismiss="create" tabindex="-1" aria-hidden="true"></div>
     <div
@@ -107,6 +111,7 @@
     </div>
   </div>
 
+  <!-- Request to join modal -->
   <div id="dashboardJoinModal" class="dashboard-modal-root" hidden aria-hidden="true">
     <div class="dashboard-modal-scrim" data-dashboard-modal-dismiss="join" tabindex="-1" aria-hidden="true"></div>
     <div
@@ -142,6 +147,7 @@
     </div>
   </div>
 
+  <!-- Login screen -->
   <div id="loginScreen" class="login-screen is-hidden" aria-modal="true" role="dialog" aria-label="Sign in" aria-hidden="true">
     <div class="login-card hud-glass">
       <svg class="login-logo" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">

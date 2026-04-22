@@ -14,6 +14,7 @@ import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById, requestToJoi
 import { initNotifications } from "../notifications.js";
 import { createItem, deleteItem, subscribeToItems, updateItem } from "../itemSyncService.js";
 import { mountGroupChatPanel } from "../groupChatPanel.js";
+import { toggleBoardSettingsMenu } from "../boardSettingsMenu.js";
 
 let activeWhiteboard = null;
 
@@ -60,6 +61,38 @@ async function initPage(user, boardID) {
   });
 
   initOverlayPanels(boardID, user, meta);
+  initTitleSettingsMenu(user, meta);
+}
+
+/**
+ * Wires the settings caret next to the whiteboard title. Opens the shared
+ * settings menu anchored to the caret, with canvas access for the Export PNG
+ * option.
+ *
+ * @param {import('firebase/auth').User} user
+ * @param {{ id: string, name: string, members: string[], mods: string[], owner: string }} meta
+ */
+function initTitleSettingsMenu(user, meta) {
+  const btn = /** @type {HTMLButtonElement | null} */ (document.getElementById("boardTitleSettingsBtn"));
+  const titleEl = document.getElementById("boardTitle");
+  if (!btn) return;
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleBoardSettingsMenu({
+      anchorEl: btn,
+      board: meta,
+      userId: user.uid,
+      canvas: activeWhiteboard?.canvas ?? null,
+      onRenamed: (newName) => {
+        if (titleEl) titleEl.textContent = newName;
+        getJoinedWhiteboards().then(refreshWhiteboardList).catch(console.error);
+      },
+      onRemoved: () => {
+        window.location.replace("index.html");
+      },
+    });
+  });
 }
 
 function attachRealtimeItemSync(whiteboard, boardID, userId) {

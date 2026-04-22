@@ -126,8 +126,7 @@ describe('createWhiteboard', () => {
       name: 'My Board',
       members: ['user-1'],
       mods: [],
-      owner: 'user-1',
-      pendingRequests: false,
+      owner: 'user-1'
     });
   });
 

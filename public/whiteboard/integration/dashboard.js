@@ -3,8 +3,9 @@
  */
 
 import { mountAuthUI, currentUser } from "../auth.js";
-import { getJoinedWhiteboards, createWhiteboard, addUserToWhiteboard, requestToJoinWhiteboard } from "../firestore.js";
+import { getJoinedWhiteboards, createWhiteboard, requestToJoinWhiteboard } from "../firestore.js";
 import { initNotifications } from "../notifications.js";
+import { toggleBoardSettingsMenu } from "../boardSettingsMenu.js";
 
 /**
  * Shows a temporary toast message at the bottom of the screen.
@@ -50,9 +51,14 @@ function renderBoardList(boards) {
 
   emptyEl.hidden = true;
 
+  const uid = currentUser()?.uid ?? "";
+
   for (const board of boards) {
+    const card = document.createElement("div");
+    card.className = "dashboard-board-card";
+
     const link = document.createElement("a");
-    link.className = "dashboard-board-card dashboard-board-card-link";
+    link.className = "dashboard-board-card-link";
     link.href = boardWorkspaceHref(board);
     link.setAttribute("aria-label", `Open whiteboard ${board.name}`);
 
@@ -75,7 +81,38 @@ function renderBoardList(boards) {
       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>';
 
     link.append(thumb, title, spacer, chevron);
-    mount.appendChild(link);
+
+    const settingsBtn = document.createElement("button");
+    settingsBtn.type = "button";
+    settingsBtn.className = "board-settings-trigger";
+    settingsBtn.title = "Whiteboard settings";
+    settingsBtn.setAttribute("aria-label", `Settings for ${board.name}`);
+    settingsBtn.setAttribute("aria-haspopup", "menu");
+    settingsBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+      '<circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>' +
+      '</svg>';
+    settingsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleBoardSettingsMenu({
+        anchorEl: settingsBtn,
+        board,
+        userId: uid,
+        onRenamed: (newName) => {
+          title.textContent = newName;
+          link.setAttribute("aria-label", `Open whiteboard ${newName}`);
+          settingsBtn.setAttribute("aria-label", `Settings for ${newName}`);
+        },
+        onRemoved: () => {
+          card.remove();
+          loadAndRenderBoards().catch(console.error);
+        },
+      });
+    });
+
+    card.append(link, settingsBtn);
+    mount.appendChild(card);
   }
 }
 

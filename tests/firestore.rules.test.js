@@ -61,8 +61,7 @@ const baseBoard = {
   name: 'Test Board',
   owner: 'alice',
   mods: ['bob'],
-  members: ['alice', 'bob', 'charlie'],
-  pendingRequests: false,
+  members: ['alice', 'bob', 'charlie']
 };
 
 const baseItem = {
@@ -180,11 +179,41 @@ describe('whiteboards: update', () => {
     );
   });
 
-  it('regular member cannot update the board', async () => {
+  it('regular member cannot update the board name', async () => {
     await seedBoard(baseBoard);
     await assertFails(
       updateDoc(doc(db('charlie'), `whiteboards/${BOARD_ID}`), {
         name: 'Renamed',
+      }),
+    );
+  });
+
+  it('owner can leave whiteboard', async () => {
+    await seedBoard(baseBoard);
+    await assertSucceeds(
+      updateDoc(doc(db('alice'), `whiteboards/${BOARD_ID}`), {
+        owner: 'bob',
+        mods: [],
+        members: ['bob', 'charlie']
+      }),
+    );
+  });
+
+  it('mod can leave whiteboard', async () => {
+    await seedBoard(baseBoard);
+    await assertSucceeds(
+      updateDoc(doc(db('bob'), `whiteboards/${BOARD_ID}`), {
+        mods: [],
+        members: ['alice', 'charlie']
+      }),
+    );
+  });
+
+  it('member can leave whiteboard', async () => {
+    await seedBoard(baseBoard);
+    await assertSucceeds(
+      updateDoc(doc(db('charlie'), `whiteboards/${BOARD_ID}`), {
+        members: ['alice', 'bob']
       }),
     );
   });

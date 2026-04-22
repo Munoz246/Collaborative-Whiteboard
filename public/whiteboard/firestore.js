@@ -23,8 +23,7 @@ export async function createWhiteboard(userID, name) {
         name,
         members: [ userID ],
         mods: [],
-        owner: userID,
-        pendingRequests: false
+        owner: userID
     });
     
     return newWB.id;
@@ -45,11 +44,23 @@ export async function getWhiteboardById(boardId) {
 
 /**
  * Deletes a whiteboard. This only works if the current user is the owner.
- * 
+ *
  * @param {string} whiteboardID Whiteboard to be deleted
  */
 export async function deleteWhiteboard(whiteboardID) {
     await db.collection('whiteboards').doc(whiteboardID).delete();
+}
+
+/**
+ * Renames a whiteboard. Permitted for the owner (and moderators, per security rules).
+ *
+ * @param {string} whiteboardID Whiteboard to rename
+ * @param {string} name New name
+ */
+export async function renameWhiteboard(whiteboardID, name) {
+    const trimmed = String(name ?? '').trim();
+    if (!trimmed) throw Error('Name cannot be empty');
+    await db.collection('whiteboards').doc(whiteboardID).update({ name: trimmed });
 }
 
 /**
