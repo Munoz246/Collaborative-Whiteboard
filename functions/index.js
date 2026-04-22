@@ -114,7 +114,7 @@ exports.askWhiteboardAssistant = onRequest(
       }
 
       const user = await requireAuth(req);
-      const { whiteboardId, prompt } = req.body || {};
+      const { whiteboardId, prompt, files = [], boardState = {} } = req.body || {};
 
       if (!whiteboardId) {
         throw new Error("Missing whiteboardId");
@@ -143,9 +143,73 @@ exports.askWhiteboardAssistant = onRequest(
       const apiKey = decryptText(keyDoc.data().encryptedApiKey);
       const openai = new OpenAI({ apiKey });
 
+      const safeFiles = Array.isArray(files) ? files : [];
+
+      //debug logging to verify file contents and structure before sending to OpenAI
+      console.log("AI request files:", safeFiles.map(f => ({
+        name: f?.name,
+        type: f?.type,
+        textPreview: typeof f?.text === "string"
+          ? f.text.slice(0, 50)
+          : null
+      })));
+
+      const fileTextBlocks = safeFiles
+        .filter((file) => file && typeof file.text === "string")
+        .map((file, index) => {
+          const fileName = typeof file.name === "string" && file.name.trim()
+            ? file.name.trim()
+            : `file-${index + 1}`;
+          const fileType = typeof file.type === "string" && file.type.trim()
+            ? file.type.trim()
+            : "text/plain";
+
+          return (
+            `BEGIN ATTACHED FILE ${index + 1}\n` +
+            `Name: ${fileName}\n` +
+            `Type: ${fileType}\n` +
+            `Contents:\n${file.text.slice(0, 12000)}\n` +
+            `END ATTACHED FILE ${index + 1}`
+          );
+        });
+
       const response = await openai.responses.create({
         model: DEFAULT_MODEL,
-        input: prompt
+        input: [
+          {
+            role: "system",
+            content: [
+              {
+                type: "input_text",
+                text:
+                  "You are a helpful assistant for a collaborative whiteboard. " +
+                  "When attached files are present, treat them as the highest-priority source for file-related questions. " +
+                  "Do not confuse whiteboard geometry/state data with attached file contents."
+              }
+            ]
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `User prompt:\n${prompt}`
+              },
+              {
+                type: "input_text",
+                text: `Attached files count: ${safeFiles.length}`
+              },
+              ...fileTextBlocks.map((textBlock) => ({
+                type: "input_text",
+                text: textBlock
+              })),
+              {
+                type: "input_text",
+                text: `Whiteboard state (use only when relevant):\n${JSON.stringify(boardState, null, 2).slice(0, 12000)}`
+              }
+            ]
+          }
+        ]
       });
 
       const answer = getResponseText(response);
@@ -154,6 +218,11 @@ exports.askWhiteboardAssistant = onRequest(
         userId: user.uid,
         userPrompt: prompt,
         assistantReply: answer,
+        attachedFiles: (Array.isArray(files) ? files : []).map((file) => ({
+          name: file?.name || "",
+          type: file?.type || "",
+          size: typeof file?.text === "string" ? file.text.length : 0,
+        })),
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 

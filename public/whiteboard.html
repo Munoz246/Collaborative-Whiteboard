@@ -231,9 +231,18 @@
           </header>
           <div class="hud-panel__body d-flex flex-column gap-2">
             <input id="apiKeyInput" class="form-control hud-input" type="password" placeholder="API key (optional)" />
+
             <div id="aiMessages" class="ai-messages hud-ai-messages">
               <div class="ai-message bot hud-chat-bubble">Hello! How can I help you?</div>
             </div>
+
+            <div id="aiDropZone" class="ai-dropzone" tabindex="0" role="button" aria-label="Upload files to AI chat">
+              Drag &amp; drop files here or click to upload
+              <input type="file" id="aiFileInput" hidden multiple />
+            </div>
+
+            <div id="aiFileList" class="ai-file-list" aria-live="polite"></div>
+
             <textarea id="aiPromptInput" rows="3" class="form-control hud-input" placeholder="Your prompt…"></textarea>
             <button id="askAiBtn" class="btn btn-dark w-100 rounded-pill" type="button">Send</button>
           </div>

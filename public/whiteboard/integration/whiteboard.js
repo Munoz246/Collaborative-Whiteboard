@@ -227,6 +227,12 @@ function initAIPanel(boardID) {
   const promptInput = document.getElementById("aiPromptInput");
   const apiKeyInput = document.getElementById("apiKeyInput");
 
+  const dropZone = document.getElementById("aiDropZone");
+  const fileInput = document.getElementById("aiFileInput");
+  const fileListEl = document.getElementById("aiFileList");
+
+  let attachedFiles = [];
+
   askBtn.addEventListener("click", async () => {
     const prompt = promptInput.value.trim();
     const apiKey = apiKeyInput.value.trim();
@@ -248,13 +254,27 @@ function initAIPanel(boardID) {
 
       const boardState = activeWhiteboard?.store?.serialize?.() || {};
 
+      const fileContents = await Promise.all(
+        attachedFiles.map(async (file) => ({
+          name: file.name,
+          type: file.type || "text/plain",
+          text: await file.text()
+        }))
+      );
+      //debugging to verify file contents before sending to askAI
+      console.log("FILES BEING SENT:", fileContents);
+
       const res = await askAI({
         whiteboardId: boardID,
         prompt,
-        boardState
+        boardState,
+        files: fileContents
       });
 
       addMessage("assistant", res.answer);
+
+      attachedFiles = [];
+      renderAttachedFiles();
 
     } catch (err) {
       addMessage("assistant", "Error: " + err.message);
@@ -262,6 +282,56 @@ function initAIPanel(boardID) {
 
     askBtn.disabled = false;
   });
+  //file stuff for ai
+  function renderAttachedFiles() {
+    if (!fileListEl) return;
+    fileListEl.innerHTML = "";
+
+    for (const file of attachedFiles) {
+      const chip = document.createElement("div");
+      chip.className = "ai-file-chip";
+      chip.textContent = `${file.name} (${Math.ceil(file.size / 1024)} KB)`;
+      fileListEl.appendChild(chip);
+    }
+  }
+
+  function handleFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+
+    attachedFiles.push(...files);
+    renderAttachedFiles();
+  }
+  //click support for file input
+  if (dropZone && fileInput) {
+    dropZone.addEventListener("click", () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", (e) => {
+      handleFiles(e.target.files);
+      fileInput.value = "";
+    });
+  }
+
+  //drag & drop support for files
+  if (dropZone) {
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      handleFiles(e.dataTransfer.files);
+    });
+  }
+
 }
 
 /**
