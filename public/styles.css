@@ -565,6 +565,44 @@ body {
 .hud-file-list .hud-placeholder-row:last-child {
   margin-bottom: 0;
 }
+/* -- File manager styling -- */
+.file-manager-actions {
+  margin-bottom: 12px;
+}
+
+.file-manager-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.file-manager-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.file-manager-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-manager-meta {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.file-manager-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
 
 /* Override legacy sidebar chat/board list styles inside HUD panels */
 .hud-board-list.board-list li.hud-placeholder-row {

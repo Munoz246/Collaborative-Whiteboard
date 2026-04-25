@@ -15,6 +15,12 @@ import { initNotifications } from "../notifications.js";
 import { createItem, deleteItem, subscribeToItems, updateItem } from "../itemSyncService.js";
 import { mountGroupChatPanel } from "../groupChatPanel.js";
 import { toggleBoardSettingsMenu } from "../boardSettingsMenu.js";
+import {
+  subscribeToWhiteboardFiles,
+  uploadWhiteboardFiles,
+  getWhiteboardFileDownloadUrl,
+  deleteWhiteboardFile,
+} from "../fileManager.js";
 
 let activeWhiteboard = null;
 
@@ -254,6 +260,7 @@ function initOverlayPanels(boardID, user, meta) {
   document.getElementById('newBoardBtn').addEventListener('click', onNewBoardClick);
 
   initAIPanel(boardID);
+  initFileManager(boardID);
   initSharePanel(boardID, user, meta);
 }
 
@@ -479,6 +486,105 @@ function initSharePanel(boardID, user, meta) {
       addUserBtn.disabled = false;
     }
   });
+}
+
+function initFileManager(boardID) {
+  const uploadBtn = document.getElementById("uploadWhiteboardFileBtn");
+  const fileInput = document.getElementById("whiteboardFileInput");
+  const fileList = document.getElementById("whiteboardFileList");
+  const statusEl = document.getElementById("fileManagerStatus");
+
+  if (!uploadBtn || !fileInput || !fileList) return;
+
+  // open file picker
+  uploadBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  // handle upload
+  fileInput.addEventListener("change", async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    uploadBtn.disabled = true;
+    if (statusEl) statusEl.textContent = "Uploading…";
+
+    try {
+      await uploadWhiteboardFiles(boardID, files);
+      if (statusEl) statusEl.textContent = "Upload complete.";
+      fileInput.value = "";
+    } catch (err) {
+      console.error(err);
+      if (statusEl) statusEl.textContent = err.message;
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  });
+
+  // listen for file changes (realtime)
+  subscribeToWhiteboardFiles(
+    boardID,
+    (files) => {
+      fileList.innerHTML = "";
+
+      if (!files.length) {
+        const empty = document.createElement("li");
+        empty.className = "text-muted small";
+        empty.textContent = "No files uploaded yet.";
+        fileList.appendChild(empty);
+        return;
+      }
+
+      for (const file of files) {
+        const item = document.createElement("li");
+        item.className = "file-manager-row";
+
+        const info = document.createElement("div");
+        info.className = "file-manager-info";
+
+        const name = document.createElement("div");
+        name.className = "file-manager-name";
+        name.textContent = file.name || "Untitled file";
+
+        const meta = document.createElement("div");
+        meta.className = "file-manager-meta";
+        meta.textContent = `${Math.ceil((file.size || 0) / 1024)} KB`;
+
+        info.append(name, meta);
+
+        const actions = document.createElement("div");
+        actions.className = "file-manager-row-actions";
+
+        // download
+        const downloadBtn = document.createElement("button");
+        downloadBtn.type = "button";
+        downloadBtn.className = "btn btn-sm btn-outline-dark";
+        downloadBtn.textContent = "Download";
+        downloadBtn.addEventListener("click", async () => {
+          const url = await getWhiteboardFileDownloadUrl(file.storagePath);
+          window.open(url, "_blank", "noopener");
+        });
+
+        // delete
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "btn btn-sm btn-outline-danger";
+        deleteBtn.textContent = "Remove";
+        deleteBtn.addEventListener("click", async () => {
+          if (!confirm(`Remove ${file.name}?`)) return;
+          await deleteWhiteboardFile(boardID, file.id, file.storagePath);
+        });
+
+        actions.append(downloadBtn, deleteBtn);
+        item.append(info, actions);
+        fileList.appendChild(item);
+      }
+    },
+    (err) => {
+      console.error("File manager subscription failed:", err);
+      if (statusEl) statusEl.textContent = "Could not load files.";
+    }
+  );
 }
 
 /**

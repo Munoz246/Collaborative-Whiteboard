@@ -27,6 +27,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   <script>
     window.firebase.initializeApp({
       apiKey:            "AIzaSyDLfw_BLPm6pxTIYCKAPn66zy4GplL_5Dw",
@@ -278,13 +279,14 @@
             <button type="button" class="hud-panel-close" data-overlay-close="fileManager" aria-label="Close file manager">×</button>
           </header>
           <div class="hud-panel__body">
-            <ul class="list-unstyled mb-0 hud-file-list">
-              <li class="hud-placeholder-row"></li>
-              <li class="hud-placeholder-row"></li>
-              <li class="hud-placeholder-row"></li>
-              <li class="hud-placeholder-row"></li>
-            </ul>
-            <p class="text-muted small mb-0 mt-2">Placeholder — attach files here later.</p>
+            <div class="file-manager-actions">
+              <input id="whiteboardFileInput" type="file" hidden accept=".txt,.pdf,.doc" multiple />
+              <button id="uploadWhiteboardFileBtn" class="btn btn-dark w-100 rounded-pill" type="button">
+                Upload files
+              </button>
+              <p id="fileManagerStatus" class="text-muted small mb-0 mt-2"></p>
+            </div>
+            <ul id="whiteboardFileList" class="list-unstyled mb-0 hud-file-list"></ul>
           </div>
         </div>
       </section>

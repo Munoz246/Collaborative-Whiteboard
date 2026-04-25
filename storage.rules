@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isBoardMember(boardId) {
+      return request.auth != null
+        && request.auth.uid in firestore.get(
+          /databases/(default)/documents/whiteboards/$(boardId)
+        ).data.members;
+    }
+
+    match /whiteboards/{boardId}/files/{fileName} {
+      allow read: if isBoardMember(boardId);
+      allow delete: if isBoardMember(boardId);
+
+      allow create, update: if isBoardMember(boardId)
+        && request.resource.size < 10 * 1024 * 1024
+        && (
+          request.resource.contentType == "text/plain" ||
+          request.resource.contentType == "application/pdf" ||
+          request.resource.contentType == "application/msword" ||
+          request.resource.contentType == "application/octet-stream"
+        );
+    }
+  }
+}
