@@ -172,7 +172,90 @@ exports.askWhiteboardAssistant = onRequest(
             `END ATTACHED FILE ${index + 1}`
           );
         });
+      //file remembering for ai
+      for (const file of safeFiles) {
+        if (typeof file?.text === "string" && file.text.trim()) {
+          await db.collection(`whiteboards/${whiteboardId}/aiFiles`).add({
+            name: file.name || "Untitled file",
+            type: file.type || "text/plain",
+            text: file.text.slice(0, 50000),
+            uploadedBy: user.uid,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      }
 
+      function shouldUseRememberedFiles(prompt, currentFilesCount) {
+        const text = String(prompt || "").toLowerCase();
+
+        if (currentFilesCount > 0) return true;
+
+        return [
+          "file",
+          "files",
+          "document",
+          "pdf",
+          "doc",
+          "attachment",
+          "uploaded",
+          "upload",
+          "from earlier",
+          "from before",
+          "remember",
+        ].some((word) => text.includes(word));
+      }
+
+      function scoreRememberedFile(file, prompt) {
+        const promptText = String(prompt || "").toLowerCase();
+        const fileName = String(file.name || "").toLowerCase();
+        const fileType = String(file.type || "").toLowerCase();
+        const fileText = String(file.text || "").toLowerCase();
+
+        let score = 0;
+
+        for (const word of promptText.split(/\s+/)) {
+          const cleanWord = word.replace(/[^\w]/g, "");
+          if (cleanWord.length < 3) continue;
+
+          if (fileName.includes(cleanWord)) score += 5;
+          if (fileType.includes(cleanWord)) score += 2;
+          if (fileText.includes(cleanWord)) score += 1;
+        }
+
+        return score;
+      }
+
+      let rememberedFileBlocks = [];
+
+      if (shouldUseRememberedFiles(prompt, safeFiles.length)) {
+        const rememberedFilesSnap = await db
+          .collection(`whiteboards/${whiteboardId}/aiFiles`)
+          .orderBy("createdAt", "desc")
+          .limit(20)
+          .get();
+
+        const scoredFiles = rememberedFilesSnap.docs
+          .map((doc) => doc.data())
+          .map((file) => ({
+            file,
+            score: scoreRememberedFile(file, prompt),
+          }))
+          .filter((item) => item.score > 0 || safeFiles.length > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3);
+
+        rememberedFileBlocks = scoredFiles.map(({ file }, index) => (
+          `RELEVANT REMEMBERED FILE ${index + 1}\n` +
+          `Name: ${file.name || "Untitled file"}\n` +
+          `Type: ${file.type || "text/plain"}\n` +
+          `Contents:\n${String(file.text || "").slice(0, 12000)}`
+        ));
+      }
+      //debugging for remembered files in "firebase functions:log"
+      console.log("Remembered files sent:", rememberedFileBlocks.length);
+      
+
+      //ai calls
       const response = await openai.responses.create({
         model: DEFAULT_MODEL,
         input: [
@@ -184,6 +267,8 @@ exports.askWhiteboardAssistant = onRequest(
                 text:
                   "You are a helpful assistant for a collaborative whiteboard. " +
                   "When attached files are present, treat them as the highest-priority source for file-related questions. " +
+                  "You may also use remembered files from previous messages when relevant. " +
+                  "Only  reference the whiteboard when asked" +
                   "Do not confuse whiteboard geometry/state data with attached file contents."
               }
             ]
@@ -200,6 +285,10 @@ exports.askWhiteboardAssistant = onRequest(
                 text: `Attached files count: ${safeFiles.length}`
               },
               ...fileTextBlocks.map((textBlock) => ({
+                type: "input_text",
+                text: textBlock
+              })),
+              ...rememberedFileBlocks.map((textBlock) => ({
                 type: "input_text",
                 text: textBlock
               })),
@@ -227,6 +316,45 @@ exports.askWhiteboardAssistant = onRequest(
       });
 
       res.json({ answer });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+//ai chat history
+exports.getAiHistory = onRequest(
+  { secrets: [KEY_ENCRYPTION_SECRET] },
+  async (req, res) => {
+    try {
+      const user = await requireAuth(req);
+      const { whiteboardId } = req.body || {};
+
+      if (!whiteboardId) {
+        throw new Error("Missing whiteboardId");
+      }
+
+      const boardDoc = await db.doc(`whiteboards/${whiteboardId}`).get();
+
+      if (!boardDoc.exists) {
+        throw new Error("Whiteboard not found");
+      }
+
+      const boardData = boardDoc.data();
+
+      if (!boardData.members?.includes(user.uid)) {
+        throw new Error("You are not a member of this whiteboard");
+      }
+
+      const snap = await db
+        .collection(`whiteboards/${whiteboardId}/aiMessages`)
+        .orderBy("createdAt", "asc")
+        .limit(50)
+        .get();
+
+      res.json({
+        messages: snap.docs.map((doc) => doc.data())
+      });
+
     } catch (err) {
       res.status(400).json({ error: err.message });
     }

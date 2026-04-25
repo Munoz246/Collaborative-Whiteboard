@@ -44,3 +44,7 @@ export function addMessage(role, text) {
   container.appendChild(el);
   container.scrollTop = container.scrollHeight;
 }
+
+export async function getAiHistory(whiteboardId) {
+  return post("/api/getAiHistory", { whiteboardId });
+}

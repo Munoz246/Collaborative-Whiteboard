@@ -21,11 +21,24 @@
     "rewrites": [
       {
         "source": "/api/saveOpenAiKey",
-        "function": "saveOpenAiKey"
+        "function": {
+          "functionId": "saveOpenAiKey",
+          "region": "us-central1"
+        }
       },
       {
         "source": "/api/askWhiteboardAssistant",
-        "function": "askWhiteboardAssistant"
+        "function": {
+          "functionId": "askWhiteboardAssistant",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/getAiHistory",
+        "function": {
+          "functionId": "getAiHistory",
+          "region": "us-central1"
+        }
       },
       {
         "source": "**",

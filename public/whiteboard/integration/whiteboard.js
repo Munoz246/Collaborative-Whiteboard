@@ -4,7 +4,7 @@
  * Requires URL query `board=<whiteboardId>`; otherwise redirects to index.html (dashboard).
  * Auth via mountAuthUI(); canvas initializes after sign-in.
  */
-import { saveOpenAiKey, askAI, addMessage } from "../ai.js";
+import { saveOpenAiKey, askAI, addMessage, getAiHistory } from "../ai.js";
 import { WhiteboardModule } from "../WhiteboardModule.js";
 import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
@@ -274,6 +274,46 @@ function initAIPanel(boardID) {
 
   let attachedFiles = [];
 
+  getAiHistory(boardID)
+    .then((data) => {
+      const container = document.getElementById("aiMessages");
+
+      if (!container) return;
+
+      container.innerHTML = "";
+
+      for (const msg of data.messages || []) {
+        if (msg.userPrompt) {
+          addMessage("user", msg.userPrompt);
+        }
+        if (msg.assistantReply) {
+          addMessage("assistant", msg.assistantReply);
+        }
+      }
+    })
+    .catch((err) => {
+      console.error("Failed to load AI history:", err);
+    });
+    console.log("Loading AI history for board:", boardID);
+
+    getAiHistory(boardID)
+      .then((data) => {
+        console.log("AI history loaded:", data);
+
+        const container = document.getElementById("aiMessages");
+        if (!container) return;
+
+        container.innerHTML = "";
+
+        for (const msg of data.messages || []) {
+          if (msg.userPrompt) addMessage("user", msg.userPrompt);
+          if (msg.assistantReply) addMessage("assistant", msg.assistantReply);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load AI history:", err);
+      });
+
   askBtn.addEventListener("click", async () => {
     const prompt = promptInput.value.trim();
     const apiKey = apiKeyInput.value.trim();
@@ -313,9 +353,9 @@ function initAIPanel(boardID) {
       });
 
       addMessage("assistant", res.answer);
-
       attachedFiles = [];
       renderAttachedFiles();
+
 
     } catch (err) {
       addMessage("assistant", "Error: " + err.message);
