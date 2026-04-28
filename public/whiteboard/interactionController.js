@@ -1031,11 +1031,43 @@ export class InteractionController {
 
     const selectable = true; // needed for editing/controls
     const textbox = this.renderer.addElementToCanvas(element, { selectable });
-    textbox.enterEditing();
-    textbox.selectAll();
+    const elementId = element.id;
+
+    // Creating text is a one-shot action; immediately return to select mode.
+    this.setTool("select");
+
+    const activateTextEditing = (targetTextbox) => {
+      if (!targetTextbox) return;
+      this.canvas.setActiveObject(targetTextbox);
+      targetTextbox.enterEditing();
+      targetTextbox.selectAll();
+      targetTextbox.hiddenTextarea?.focus();
+      this.canvas.requestRenderAll();
+    };
+    activateTextEditing(textbox);
+    // Fallback in case Fabric has not attached/focused the hidden textarea yet.
+    if (!textbox.isEditing) {
+      queueMicrotask(() => {
+        activateTextEditing(this.renderer.getFabricObject(elementId));
+      });
+    }
+    const recoverEditingOnMouseUp = () => {
+      const liveTextbox = this.renderer.getFabricObject(elementId);
+      if (!liveTextbox?.canvas) return;
+      if (liveTextbox.isEditing) return;
+      activateTextEditing(liveTextbox);
+    };
+    if (typeof this.canvas.once === "function") {
+      this.canvas.once("mouse:up", recoverEditingOnMouseUp);
+    } else {
+      const recoverAndUnbind = () => {
+        this.canvas.off("mouse:up", recoverAndUnbind);
+        recoverEditingOnMouseUp();
+      };
+      this.canvas.on("mouse:up", recoverAndUnbind);
+    }
 
     // When the user finishes editing, sync back into structured state.
-    const elementId = element.id;
     textbox.on("editing:exited", () => {
       this.renderer.syncElementFromFabricObject(elementId);
       const live = this.store.getElement(elementId);
@@ -1049,7 +1081,6 @@ export class InteractionController {
       this.canvas.requestRenderAll();
     });
 
-    this.canvas.setActiveObject(textbox);
     this.canvas.requestRenderAll();
   }
 }
