@@ -13,6 +13,21 @@ function pointsToPlain(points) {
   return (points || []).map((p) => ({ x: p.x, y: p.y }));
 }
 
+function buildRhombusPoints(width, height) {
+  const w = Math.max(1, width);
+  const h = Math.max(1, height);
+  return [
+    { x: w / 2, y: 0 },
+    { x: w, y: h / 2 },
+    { x: w / 2, y: h },
+    { x: 0, y: h / 2 },
+  ];
+}
+
+function isInPlaceUpdatableType(type) {
+  return type === "rectangle" || type === "circle" || type === "triangle" || type === "rhombus";
+}
+
 function computePolylineIntrinsicSize(points) {
   let minX = Infinity;
   let minY = Infinity;
@@ -205,8 +220,121 @@ export class FabricRenderer {
       this.addElementToCanvas(element, { selectable });
       return;
     }
+
+    if (existing.__elementType === element.type && isInPlaceUpdatableType(element.type)) {
+      this.updateFabricObjectFromElement(existing, element, selectable && !element.isLocked);
+      existing.setCoords();
+      this.canvas.requestRenderAll();
+      return;
+    }
+
     this.removeElementFromCanvas(element.id);
     this.addElementToCanvas(element, { selectable });
+  }
+
+  updateFabricObjectFromElement(obj, element, selectable) {
+    const common = {
+      left: element.position?.x ?? 0,
+      top: element.position?.y ?? 0,
+      angle: element.rotation ?? 0,
+      selectable,
+      evented: selectable,
+    };
+
+    if (element.type === "rectangle") {
+      obj.set({
+        ...common,
+        width: element.size?.w ?? 1,
+        height: element.size?.h ?? 1,
+        scaleX: 1,
+        scaleY: 1,
+        fill: element.style?.fill ?? "rgba(37, 99, 235, 0.35)",
+        stroke: element.style?.stroke ?? "#2563eb",
+        strokeWidth: element.style?.strokeWidth ?? 2,
+      });
+      return;
+    }
+
+    if (element.type === "circle") {
+      const diameter = Math.max(1, element.size?.w ?? 1);
+      obj.set({
+        ...common,
+        radius: diameter / 2,
+        scaleX: 1,
+        scaleY: 1,
+        fill: element.style?.fill ?? "rgba(37, 99, 235, 0.35)",
+        stroke: element.style?.stroke ?? "#2563eb",
+        strokeWidth: element.style?.strokeWidth ?? 2,
+      });
+      return;
+    }
+
+    if (element.type === "triangle") {
+      obj.set({
+        ...common,
+        width: element.size?.w ?? 1,
+        height: element.size?.h ?? 1,
+        scaleX: 1,
+        scaleY: 1,
+        fill: element.style?.fill ?? "rgba(37, 99, 235, 0.35)",
+        stroke: element.style?.stroke ?? "#2563eb",
+        strokeWidth: element.style?.strokeWidth ?? 2,
+      });
+      return;
+    }
+
+    if (element.type === "rhombus") {
+      const prevLeft = obj.left;
+      const prevTop = obj.top;
+      obj.set({
+        ...common,
+        points: buildRhombusPoints(element.size?.w ?? 1, element.size?.h ?? 1),
+        scaleX: 1,
+        scaleY: 1,
+        fill: element.style?.fill ?? "rgba(37, 99, 235, 0.35)",
+        stroke: element.style?.stroke ?? "#2563eb",
+        strokeWidth: element.style?.strokeWidth ?? 2,
+      });
+      if (typeof obj._calcDimensions === "function") obj._calcDimensions();
+      if (typeof obj._setPositionDimensions === "function") obj._setPositionDimensions({});
+      // For remote updates, keep anchor aligned with incoming transform.
+      // Reapplying previous local left/top causes user-B desync after user-A moves.
+      obj.set({ left: common.left, top: common.top });
+      return;
+    }
+
+    if (element.type === "text") {
+      obj.set({
+        ...common,
+        text: element.content?.text ?? "",
+        width: element.size?.w ?? 1,
+        fill: element.style?.fill ?? "#111827",
+        fontSize: element.style?.fontSize ?? 20,
+        textAlign: element.style?.textAlign ?? "left",
+        scaleX: 1,
+        scaleY: 1,
+      });
+      return;
+    }
+
+    if (element.type === "path") {
+      obj.set({
+        ...common,
+        points: pointsToPlain(element.content?.points ?? []),
+        fill: element.style?.fill ?? "",
+        stroke: element.style?.stroke ?? "#111827",
+        strokeWidth: element.style?.strokeWidth ?? 2,
+      });
+      return;
+    }
+
+    if (element.type === "file") {
+      obj.set({
+        ...common,
+        text: element.content?.fileName || "File",
+        width: element.size?.w ?? 180,
+      });
+    }
   }
 
   // =============================================================================
@@ -248,6 +376,24 @@ export class FabricRenderer {
         radius,
         lockUniScaling: true,
         // Ensure sizing uses element.size consistently.
+        fill: element.style.fill ?? "rgba(37, 99, 235, 0.35)",
+        stroke: element.style.stroke ?? "#2563eb",
+        strokeWidth: element.style.strokeWidth ?? 2,
+      });
+      setCommonControls(obj);
+    } else if (element.type === "triangle") {
+      obj = new fabric.Triangle({
+        ...common,
+        width: element.size.w,
+        height: element.size.h,
+        fill: element.style.fill ?? "rgba(37, 99, 235, 0.35)",
+        stroke: element.style.stroke ?? "#2563eb",
+        strokeWidth: element.style.strokeWidth ?? 2,
+      });
+      setCommonControls(obj);
+    } else if (element.type === "rhombus") {
+      obj = new fabric.Polygon(buildRhombusPoints(element.size.w, element.size.h), {
+        ...common,
         fill: element.style.fill ?? "rgba(37, 99, 235, 0.35)",
         stroke: element.style.stroke ?? "#2563eb",
         strokeWidth: element.style.strokeWidth ?? 2,
@@ -298,6 +444,7 @@ export class FabricRenderer {
     }
 
     obj.__elementId = element.id;
+    obj.__elementType = element.type;
     return obj;
   }
 
@@ -363,6 +510,40 @@ export class FabricRenderer {
         scaleX: 1,
         scaleY: 1,
       });
+      obj.setCoords();
+    } else if (element.type === "triangle") {
+      nextStyle.fill = obj.fill;
+      nextStyle.stroke = obj.stroke;
+      nextStyle.strokeWidth = obj.strokeWidth;
+      const geomW = (obj.width ?? 1) * (obj.scaleX ?? 1);
+      const geomH = (obj.height ?? 1) * (obj.scaleY ?? 1);
+      nextSize = { w: Math.max(1, geomW), h: Math.max(1, geomH) };
+      obj.set({
+        width: nextSize.w,
+        height: nextSize.h,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      obj.setCoords();
+    } else if (element.type === "rhombus") {
+      nextStyle.fill = obj.fill;
+      nextStyle.stroke = obj.stroke;
+      nextStyle.strokeWidth = obj.strokeWidth;
+      const geomW = (obj.width ?? 1) * (obj.scaleX ?? 1);
+      const geomH = (obj.height ?? 1) * (obj.scaleY ?? 1);
+      nextSize = { w: Math.max(1, geomW), h: Math.max(1, geomH) };
+      const prevLeft = obj.left;
+      const prevTop = obj.top;
+      obj.set({
+        points: buildRhombusPoints(nextSize.w, nextSize.h),
+        scaleX: 1,
+        scaleY: 1,
+      });
+      if (typeof obj._calcDimensions === "function") obj._calcDimensions();
+      if (typeof obj._setPositionDimensions === "function") obj._setPositionDimensions({});
+      if (typeof prevLeft === "number" && typeof prevTop === "number") {
+        obj.set({ left: prevLeft, top: prevTop });
+      }
       obj.setCoords();
     } else if (element.type === "text") {
       nextContent.text = obj.text ?? "";

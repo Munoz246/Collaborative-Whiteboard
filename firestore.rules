@@ -54,6 +54,102 @@ service cloud.firestore {
       return removedMembers == [request.auth.uid];
     }
 
+    function validItemType(itemType) {
+      return itemType in ['rectangle', 'circle', 'triangle', 'rhombus', 'path', 'text', 'note', 'file'];
+    }
+
+    function validTransform(transform) {
+      return transform is map
+        && transform.keys().hasOnly(['x', 'y', 'width', 'height', 'rotation'])
+        && transform.x is number
+        && transform.y is number
+        && transform.width is number
+        && transform.height is number
+        && transform.rotation is number
+        && transform.width > 0
+        && transform.height > 0;
+    }
+
+    function validColorField(value) {
+      return value is string && value.size() > 0 && value.size() <= 32;
+    }
+
+    function validStrokeWidth(width) {
+      return width is number && width >= 1 && width <= 64;
+    }
+
+    function validShapeKind(kind) {
+      return kind in ['rectangle', 'circle', 'triangle', 'rhombus'];
+    }
+
+    function validShapeData(shapeData) {
+      return shapeData is map
+        && shapeData.keys().hasOnly(['shapeKind', 'shapeType', 'fill', 'stroke', 'strokeWidth'])
+        && (
+          ('shapeKind' in shapeData && shapeData.shapeKind is string && validShapeKind(shapeData.shapeKind))
+          || ('shapeType' in shapeData && shapeData.shapeType is string && validShapeKind(shapeData.shapeType))
+        )
+        && (!('fill' in shapeData) || validColorField(shapeData.fill))
+        && (!('stroke' in shapeData) || validColorField(shapeData.stroke))
+        && (!('strokeWidth' in shapeData) || validStrokeWidth(shapeData.strokeWidth));
+    }
+
+    function validDrawingData(drawingData) {
+      return drawingData is map
+        && drawingData.keys().hasOnly(['color', 'strokeWidth', 'points', 'closed'])
+        && (!('color' in drawingData) || validColorField(drawingData.color))
+        && (!('strokeWidth' in drawingData) || validStrokeWidth(drawingData.strokeWidth))
+        && (!('points' in drawingData) || drawingData.points is list)
+        && (!('closed' in drawingData) || drawingData.closed is bool);
+    }
+
+    function validNoteData(noteData) {
+      return noteData is map
+        && noteData.keys().hasOnly(['text', 'color', 'fontSize', 'textAlign'])
+        && (!('text' in noteData) || noteData.text is string)
+        && (!('color' in noteData) || validColorField(noteData.color))
+        && (!('fontSize' in noteData) || (noteData.fontSize is number && noteData.fontSize >= 8 && noteData.fontSize <= 400))
+        && (!('textAlign' in noteData) || noteData.textAlign in ['left', 'center', 'right', 'justify']);
+    }
+
+    function validFileData(fileData) {
+      return fileData is map
+        && fileData.keys().hasOnly(['documentId', 'fileName', 'fileType'])
+        && (!('documentId' in fileData) || fileData.documentId is string)
+        && (!('fileName' in fileData) || fileData.fileName is string)
+        && (!('fileType' in fileData) || fileData.fileType is string);
+    }
+
+    function validItemData(itemType, data) {
+      return data is map
+        && (
+          (
+            itemType in ['rectangle', 'circle', 'triangle', 'rhombus']
+            && data.keys().hasOnly(['shape'])
+            && ('shape' in data)
+            && validShapeData(data.shape)
+          )
+          || (
+            itemType == 'path'
+            && data.keys().hasOnly(['drawing'])
+            && ('drawing' in data)
+            && validDrawingData(data.drawing)
+          )
+          || (
+            itemType in ['text', 'note']
+            && data.keys().hasOnly(['note'])
+            && ('note' in data)
+            && validNoteData(data.note)
+          )
+          || (
+            itemType == 'file'
+            && data.keys().hasOnly(['file'])
+            && ('file' in data)
+            && validFileData(data.file)
+          )
+        );
+    }
+
     // ---------- Group chat (whiteboards/{boardId}/group-chat) ----------
     function groupChatBoard(boardId) {
       return getWhiteboard(boardId);
@@ -183,8 +279,9 @@ service cloud.firestore {
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.type is string
-          && request.resource.data.transform is map
-          && request.resource.data.data is map
+          && validItemType(request.resource.data.type)
+          && validTransform(request.resource.data.transform)
+          && validItemData(request.resource.data.type, request.resource.data.data)
           && request.resource.data.isLocked is bool;
 
         // Updates must preserve schema and always stamp updatedBy with the caller.
@@ -192,8 +289,9 @@ service cloud.firestore {
         allow update: if isMember(getWhiteboard(boardId))
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.type is string
-          && request.resource.data.transform is map
-          && request.resource.data.data is map
+          && validItemType(request.resource.data.type)
+          && validTransform(request.resource.data.transform)
+          && validItemData(request.resource.data.type, request.resource.data.data)
           && request.resource.data.isLocked is bool
           && (
             !resource.data.isLocked

@@ -167,6 +167,27 @@
             <button id="shapeCircleBtn" class="hud-tool-btn hud-tool-btn--mini shape-choice" type="button" data-shape="circle" title="Circle" aria-label="Circle">
               <span class="visually-hidden">Circle</span>
             </button>
+            <button id="shapeTriangleBtn" class="hud-tool-btn hud-tool-btn--mini shape-choice" type="button" data-shape="triangle" title="Triangle" aria-label="Triangle">
+              <span class="visually-hidden">Triangle</span>
+            </button>
+            <button id="shapeRhombusBtn" class="hud-tool-btn hud-tool-btn--mini shape-choice" type="button" data-shape="rhombus" title="Rhombus" aria-label="Rhombus">
+              <span class="visually-hidden">Rhombus</span>
+            </button>
+          </span>
+          <span class="hud-shape-style-controls" id="shapeStyleControls" aria-label="Shape style controls">
+            <label class="hud-style-control" for="shapeFillColorInput" title="Fill color">
+              <span class="visually-hidden">Fill color</span>
+              <input id="shapeFillColorInput" type="color" value="#2563eb" aria-label="Shape fill color" />
+            </label>
+            <label class="hud-style-control" for="shapeStrokeColorInput" title="Outline color">
+              <span class="visually-hidden">Outline color</span>
+              <input id="shapeStrokeColorInput" type="color" value="#ef4444" aria-label="Shape outline color" />
+            </label>
+            <label class="hud-style-control hud-style-control--stroke" for="shapeStrokeWidthInput" title="Outline thickness">
+              <span class="visually-hidden">Outline thickness</span>
+              <input id="shapeStrokeWidthInput" type="range" min="1" max="16" step="1" value="4" aria-label="Shape outline thickness" />
+              <output id="shapeStrokeWidthValue" for="shapeStrokeWidthInput">4</output>
+            </label>
           </span>
           <button id="clearCanvasBtn" class="hud-tool-btn hud-tool-btn--danger" type="button" title="Clear canvas" aria-label="Clear canvas">
             <svg class="hud-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

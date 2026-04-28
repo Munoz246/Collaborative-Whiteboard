@@ -283,6 +283,7 @@ body {
 }
 
 .hud-toolbar-pill {
+  --shape-icon-cutout-bg: rgba(255, 255, 255, 0.72);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -291,6 +292,7 @@ body {
 }
 
 .hud-tool-btn {
+  --tool-btn-bg: transparent;
   width: 48px;
   height: 48px;
   border: none;
@@ -298,18 +300,20 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  background: var(--tool-btn-bg);
   color: #111827;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .hud-tool-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  --tool-btn-bg: rgba(0, 0, 0, 0.05);
+  background: var(--tool-btn-bg);
 }
 
 .hud-tool-btn.active {
-  background: rgba(0, 0, 0, 0.88);
+  --tool-btn-bg: rgba(0, 0, 0, 0.88);
+  background: var(--tool-btn-bg);
   color: #ffffff;
 }
 
@@ -330,12 +334,53 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.hud-tool-btn--mini.shape-choice[data-shape="rectangle"] {
-  border-radius: 6px;
+.hud-tool-btn--mini.shape-choice[data-shape="rectangle"],
+.hud-tool-btn--mini.shape-choice[data-shape="circle"],
+.hud-tool-btn--mini.shape-choice[data-shape="triangle"],
+.hud-tool-btn--mini.shape-choice[data-shape="rhombus"] {
+  position: relative;
 }
 
-.hud-tool-btn--mini.shape-choice[data-shape="circle"] {
+.hud-tool-btn--mini.shape-choice[data-shape="rectangle"]::before {
+  content: "";
+  width: 16px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="circle"]::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
   border-radius: 50%;
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="triangle"]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 16px solid currentColor;
+  transform: translate(-50%, -52%);
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="triangle"]::after {
+  content: none;
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="rhombus"]::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  transform: rotate(45deg);
+  border-radius: 2px;
 }
 
 .hud-tool-btn--danger {
@@ -354,6 +399,56 @@ body {
   margin-left: 4px;
   padding-left: 8px;
   border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.hud-shape-style-controls {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.hud-style-control {
+  display: inline-flex;
+  align-items: center;
+}
+
+.hud-style-control input[type="color"] {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(17, 24, 39, 0.2);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.hud-style-control input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.hud-style-control input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.hud-style-control--stroke {
+  gap: 4px;
+  min-width: 78px;
+}
+
+.hud-style-control--stroke input[type="range"] {
+  width: 58px;
+}
+
+.hud-style-control--stroke output {
+  min-width: 14px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #374151;
+  text-align: right;
 }
 
 /* ---- Floating panels ---- */

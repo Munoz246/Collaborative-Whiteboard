@@ -23,6 +23,11 @@ export class InteractionController {
 
     this.activeTool = "select";
     this.activeShapeKind = "rectangle";
+    this.shapeStyle = {
+      fill: "#2563eb",
+      stroke: "#ef4444",
+      strokeWidth: 4,
+    };
 
     this.isPanning = false;
     this.panStartClient = null;
@@ -63,6 +68,13 @@ export class InteractionController {
     this._onUiTextTool = () => this.setTool("text");
     this._onUiShapeRect = () => this.setShapeKind("rectangle");
     this._onUiShapeCircle = () => this.setShapeKind("circle");
+    this._onUiShapeTriangle = () => this.setShapeKind("triangle");
+    this._onUiShapeRhombus = () => this.setShapeKind("rhombus");
+    this._onShapeFillChange = (e) => this.onShapeFillInput(e);
+    this._onShapeStrokeChange = (e) => this.onShapeStrokeInput(e);
+    this._onShapeStrokeWidthInput = (e) => this.onShapeStrokeWidthPreview(e);
+    this._onShapeStrokeWidthCommit = (e) => this.onShapeStrokeWidthCommit(e);
+    this._onSelectionChanged = () => this.onSelectionChanged();
     this._onUiClearCanvas = () => this.clearAll();
   }
 
@@ -83,6 +95,15 @@ export class InteractionController {
 
     if (this.ui.shapeRectBtn) this.ui.shapeRectBtn.addEventListener("click", this._onUiShapeRect);
     if (this.ui.shapeCircleBtn) this.ui.shapeCircleBtn.addEventListener("click", this._onUiShapeCircle);
+    if (this.ui.shapeTriangleBtn) this.ui.shapeTriangleBtn.addEventListener("click", this._onUiShapeTriangle);
+    if (this.ui.shapeRhombusBtn) this.ui.shapeRhombusBtn.addEventListener("click", this._onUiShapeRhombus);
+
+    if (this.ui.shapeFillColorInput) this.ui.shapeFillColorInput.addEventListener("change", this._onShapeFillChange);
+    if (this.ui.shapeStrokeColorInput) this.ui.shapeStrokeColorInput.addEventListener("change", this._onShapeStrokeChange);
+    if (this.ui.shapeStrokeWidthInput) {
+      this.ui.shapeStrokeWidthInput.addEventListener("input", this._onShapeStrokeWidthInput);
+      this.ui.shapeStrokeWidthInput.addEventListener("change", this._onShapeStrokeWidthCommit);
+    }
 
     if (this.ui.clearCanvasBtn) this.ui.clearCanvasBtn.addEventListener("click", this._onUiClearCanvas);
 
@@ -101,6 +122,9 @@ export class InteractionController {
     this.canvas.on("mouse:move", this._onMouseMove);
     this.canvas.on("mouse:up", this._onMouseUp);
     this.canvas.on("mouse:wheel", this._onWheel);
+    this.canvas.on("selection:created", this._onSelectionChanged);
+    this.canvas.on("selection:updated", this._onSelectionChanged);
+    this.canvas.on("selection:cleared", this._onSelectionChanged);
 
     // Keyboard pan fallback: hold Space and drag with left mouse.
     document.addEventListener("keydown", this._onKeyDown);
@@ -108,6 +132,7 @@ export class InteractionController {
 
     // Default tool.
     this.setTool("select");
+    this.syncShapeStyleControls();
     this._initialized = true;
   }
 
@@ -121,6 +146,14 @@ export class InteractionController {
 
     if (this.ui.shapeRectBtn) this.ui.shapeRectBtn.removeEventListener("click", this._onUiShapeRect);
     if (this.ui.shapeCircleBtn) this.ui.shapeCircleBtn.removeEventListener("click", this._onUiShapeCircle);
+    if (this.ui.shapeTriangleBtn) this.ui.shapeTriangleBtn.removeEventListener("click", this._onUiShapeTriangle);
+    if (this.ui.shapeRhombusBtn) this.ui.shapeRhombusBtn.removeEventListener("click", this._onUiShapeRhombus);
+    if (this.ui.shapeFillColorInput) this.ui.shapeFillColorInput.removeEventListener("change", this._onShapeFillChange);
+    if (this.ui.shapeStrokeColorInput) this.ui.shapeStrokeColorInput.removeEventListener("change", this._onShapeStrokeChange);
+    if (this.ui.shapeStrokeWidthInput) {
+      this.ui.shapeStrokeWidthInput.removeEventListener("input", this._onShapeStrokeWidthInput);
+      this.ui.shapeStrokeWidthInput.removeEventListener("change", this._onShapeStrokeWidthCommit);
+    }
 
     if (this.ui.clearCanvasBtn) this.ui.clearCanvasBtn.removeEventListener("click", this._onUiClearCanvas);
 
@@ -137,6 +170,9 @@ export class InteractionController {
     this.canvas.off("mouse:move", this._onMouseMove);
     this.canvas.off("mouse:up", this._onMouseUp);
     this.canvas.off("mouse:wheel", this._onWheel);
+    this.canvas.off("selection:created", this._onSelectionChanged);
+    this.canvas.off("selection:updated", this._onSelectionChanged);
+    this.canvas.off("selection:cleared", this._onSelectionChanged);
 
     this._initialized = false;
   }
@@ -215,6 +251,14 @@ export class InteractionController {
       this.ui.shapeCircleBtn.classList.toggle("active", kind === "circle");
       this._setAriaPressed(this.ui.shapeCircleBtn, kind === "circle");
     }
+    if (this.ui.shapeTriangleBtn) {
+      this.ui.shapeTriangleBtn.classList.toggle("active", kind === "triangle");
+      this._setAriaPressed(this.ui.shapeTriangleBtn, kind === "triangle");
+    }
+    if (this.ui.shapeRhombusBtn) {
+      this.ui.shapeRhombusBtn.classList.toggle("active", kind === "rhombus");
+      this._setAriaPressed(this.ui.shapeRhombusBtn, kind === "rhombus");
+    }
   }
 
   setTool(tool) {
@@ -248,11 +292,119 @@ export class InteractionController {
     }
 
     const shapeSubtoolbar = this.ui.shapeSubtoolbarEl;
-    if (shapeSubtoolbar && this.ui.shapeRectBtn && this.ui.shapeCircleBtn) {
+    if (shapeSubtoolbar) {
       shapeSubtoolbar.style.display = tool === "shape" ? "inline-flex" : "none";
     }
+    this.updateShapeStyleControlsVisibility();
 
     this.canvas.discardActiveObject();
+    this.canvas.requestRenderAll();
+  }
+
+  isShapeType(type) {
+    return type === "rectangle" || type === "circle" || type === "triangle" || type === "rhombus";
+  }
+
+  getSelectedShapeTargets() {
+    const active = this.canvas.getActiveObject();
+    if (!active) return [];
+    const selectedObjects =
+      active.type === "activeSelection" && typeof active.getObjects === "function"
+        ? active.getObjects()
+        : [active];
+
+    return selectedObjects.filter((obj) => {
+      const elementId = obj?.__elementId;
+      if (!elementId) return false;
+      const element = this.store.getElement(elementId);
+      return !!element && this.isShapeType(element.type) && !element.isLocked;
+    });
+  }
+
+  syncShapeStyleControls() {
+    if (this.ui.shapeFillColorInput) {
+      this.ui.shapeFillColorInput.value = this.shapeStyle.fill;
+    }
+    if (this.ui.shapeStrokeColorInput) {
+      this.ui.shapeStrokeColorInput.value = this.shapeStyle.stroke;
+    }
+    if (this.ui.shapeStrokeWidthInput) {
+      this.ui.shapeStrokeWidthInput.value = String(this.shapeStyle.strokeWidth);
+    }
+    if (this.ui.shapeStrokeWidthValue) {
+      this.ui.shapeStrokeWidthValue.textContent = String(this.shapeStyle.strokeWidth);
+    }
+  }
+
+  updateShapeStyleControlsVisibility() {
+    const controls = this.ui.shapeStyleControlsEl;
+    if (!controls) return;
+    const hasShapeSelection = this.getSelectedShapeTargets().length > 0;
+    controls.style.display = this.activeTool === "shape" || hasShapeSelection ? "inline-flex" : "none";
+  }
+
+  onSelectionChanged() {
+    const selectedShapes = this.getSelectedShapeTargets();
+    if (selectedShapes.length > 0) {
+      const firstId = selectedShapes[0].__elementId;
+      const first = firstId ? this.store.getElement(firstId) : null;
+      if (first) {
+        this.shapeStyle = {
+          fill: first.style?.fill ?? this.shapeStyle.fill,
+          stroke: first.style?.stroke ?? this.shapeStyle.stroke,
+          strokeWidth: Math.max(1, Number(first.style?.strokeWidth ?? this.shapeStyle.strokeWidth) || 1),
+        };
+        this.syncShapeStyleControls();
+      }
+    }
+    this.updateShapeStyleControlsVisibility();
+  }
+
+  onShapeFillInput(e) {
+    const fill = e?.target?.value;
+    if (typeof fill !== "string") return;
+    this.shapeStyle.fill = fill;
+    this.applyStyleToSelectedShapes({ fill });
+  }
+
+  onShapeStrokeInput(e) {
+    const stroke = e?.target?.value;
+    if (typeof stroke !== "string") return;
+    this.shapeStyle.stroke = stroke;
+    this.applyStyleToSelectedShapes({ stroke });
+  }
+
+  onShapeStrokeWidthPreview(e) {
+    const raw = Number(e?.target?.value);
+    const strokeWidth = Math.max(1, Math.round(raw || 1));
+    this.shapeStyle.strokeWidth = strokeWidth;
+    if (this.ui.shapeStrokeWidthValue) {
+      this.ui.shapeStrokeWidthValue.textContent = String(strokeWidth);
+    }
+  }
+
+  onShapeStrokeWidthCommit(e) {
+    this.onShapeStrokeWidthPreview(e);
+    this.applyStyleToSelectedShapes({ strokeWidth: this.shapeStyle.strokeWidth });
+  }
+
+  applyStyleToSelectedShapes(stylePatch) {
+    const selected = this.getSelectedShapeTargets();
+    if (selected.length === 0) return;
+
+    for (const obj of selected) {
+      const elementId = obj.__elementId;
+      if (!elementId) continue;
+
+      obj.set({
+        fill: stylePatch.fill ?? obj.fill,
+        stroke: stylePatch.stroke ?? obj.stroke,
+        strokeWidth: stylePatch.strokeWidth ?? obj.strokeWidth,
+      });
+      obj.setCoords();
+      this.renderer.syncElementFromFabricObject(elementId);
+    }
+
     this.canvas.requestRenderAll();
   }
 
@@ -629,7 +781,7 @@ export class InteractionController {
     this.isDrawingShape = true;
     this.shapeStart = { x: pointer.x, y: pointer.y };
 
-    const type = this.activeShapeKind; // "rectangle" | "circle"
+    const type = this.activeShapeKind; // "rectangle" | "circle" | "triangle" | "rhombus"
     const element = this.store.addElement({
       id: this.store.createId(),
       type,
@@ -637,15 +789,22 @@ export class InteractionController {
       size: { w: 1, h: 1 },
       rotation: 0,
       style: {
-        fill: "rgba(37, 99, 235, 0.85)",
-        stroke: "#ef4444",
-        strokeWidth: 4,
+        fill: this.shapeStyle.fill,
+        stroke: this.shapeStyle.stroke,
+        strokeWidth: this.shapeStyle.strokeWidth,
       },
       content: {},
     }, { persist: false });
 
     const selectable = false; // while drawing, we don't want selection fighting controls
-    this.renderer.addElementToCanvas(element, { selectable });
+    try {
+      const addedObj = this.renderer.addElementToCanvas(element, { selectable });
+    } catch (err) {
+      this.store.deleteElement(element.id, { persist: false });
+      this.isDrawingShape = false;
+      this.shapeStart = null;
+      return;
+    }
 
     this.shapeElementId = element.id;
   }
@@ -668,9 +827,28 @@ export class InteractionController {
     const w = Math.max(1, Math.abs(x2 - x1));
     const h = Math.max(1, Math.abs(y2 - y1));
 
-    if (this.activeShapeKind === "rectangle") {
-      obj.set({ left, top, width: w, height: h });
-      obj.setCoords();
+    if (this.activeShapeKind === "rectangle" || this.activeShapeKind === "triangle" || this.activeShapeKind === "rhombus") {
+      if (this.activeShapeKind === "rhombus") {
+        obj.set({
+          left,
+          top,
+          points: [
+            { x: w / 2, y: 0 },
+            { x: w, y: h / 2 },
+            { x: w / 2, y: h },
+            { x: 0, y: h / 2 },
+          ],
+          scaleX: 1,
+          scaleY: 1,
+        });
+        if (typeof obj._calcDimensions === "function") obj._calcDimensions();
+        if (typeof obj._setPositionDimensions === "function") obj._setPositionDimensions({});
+        obj.set({ left, top });
+        obj.setCoords();
+      } else {
+        obj.set({ left, top, width: w, height: h });
+        obj.setCoords();
+      }
     } else {
       const d = Math.max(w, h);
       const radius = Math.max(1, d / 2);
@@ -689,7 +867,9 @@ export class InteractionController {
     this.shapeStart = null;
 
     const obj = this.renderer.getFabricObject(elementId);
-    if (!obj) return;
+    if (!obj) {
+      return;
+    }
 
     const w = obj.getScaledWidth();
     const h = obj.getScaledHeight();

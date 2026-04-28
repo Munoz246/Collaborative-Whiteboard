@@ -67,9 +67,16 @@ const baseBoard = {
 const baseItem = {
   createdBy: 'alice',
   updatedBy: 'alice',
-  type: 'rect',
-  transform: { x: 0, y: 0 },
-  data: { color: 'red' },
+  type: 'rectangle',
+  transform: { x: 0, y: 0, width: 120, height: 80, rotation: 0 },
+  data: {
+    shape: {
+      shapeKind: 'rectangle',
+      fill: '#2563eb',
+      stroke: '#ef4444',
+      strokeWidth: 4,
+    },
+  },
   isLocked: false,
 };
 
@@ -275,6 +282,83 @@ describe('items subcollection', () => {
       setDoc(
         doc(db('stranger'), `whiteboards/${BOARD_ID}/items/new-item`),
         { ...baseItem, createdBy: 'stranger', updatedBy: 'stranger' },
+      ),
+    );
+  });
+
+  it('member can create a triangle item with shape style data', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(db('charlie'), `whiteboards/${BOARD_ID}/items/triangle-1`),
+        {
+          ...baseItem,
+          createdBy: 'charlie',
+          updatedBy: 'charlie',
+          type: 'triangle',
+          data: {
+            shape: {
+              shapeKind: 'triangle',
+              fill: '#f59e0b',
+              stroke: '#111827',
+              strokeWidth: 3,
+            },
+          },
+        },
+      ),
+    );
+  });
+
+  it('rejects shape create with unsupported shape kind', async () => {
+    await assertFails(
+      setDoc(
+        doc(db('charlie'), `whiteboards/${BOARD_ID}/items/bad-shape`),
+        {
+          ...baseItem,
+          createdBy: 'charlie',
+          updatedBy: 'charlie',
+          type: 'triangle',
+          data: {
+            shape: {
+              shapeKind: 'star',
+              fill: '#f59e0b',
+              stroke: '#111827',
+              strokeWidth: 3,
+            },
+          },
+        },
+      ),
+    );
+  });
+
+  it('rejects shape update with invalid stroke width', async () => {
+    await seedItem('item-1', {
+      ...baseItem,
+      createdBy: 'charlie',
+      updatedBy: 'charlie',
+      type: 'rhombus',
+      data: {
+        shape: {
+          shapeKind: 'rhombus',
+          fill: '#22c55e',
+          stroke: '#111827',
+          strokeWidth: 2,
+        },
+      },
+    });
+    await assertFails(
+      updateDoc(
+        doc(db('charlie'), `whiteboards/${BOARD_ID}/items/item-1`),
+        {
+          updatedBy: 'charlie',
+          data: {
+            shape: {
+              shapeKind: 'rhombus',
+              fill: '#22c55e',
+              stroke: '#111827',
+              strokeWidth: -2,
+            },
+          },
+        },
       ),
     );
   });
