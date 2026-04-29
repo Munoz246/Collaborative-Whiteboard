@@ -107,6 +107,13 @@
         }
       },
       {
+        "source": "/api/kickUser",
+        "function": {
+          "functionId": "kickUser",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

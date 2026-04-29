@@ -14,6 +14,7 @@ import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById, requestToJoi
 import { initNotifications } from "../notifications.js";
 import { createItem, deleteItem, subscribeToItems, updateItem } from "../itemSyncService.js?v=shape-style-v3";
 import { mountGroupChatPanel } from "../groupChatPanel.js";
+import { startPresence } from "../presence.js";
 import { toggleBoardSettingsMenu } from "../boardSettingsMenu.js";
 import {
   subscribeToWhiteboardFiles,
@@ -60,6 +61,8 @@ async function initPage(user, boardID) {
   const whiteboard = initWhiteboard();
   activeWhiteboard = whiteboard;
   attachRealtimeItemSync(whiteboard, boardID, user.uid);
+
+  whiteboard.registerDisposer(startPresence(boardID, user.uid));
 
   mountGroupChatPanel({
     boardId: boardID,

@@ -103,17 +103,20 @@ export async function getJoinedWhiteboards() {
  * Submits a join request to the specified whiteboard.
  * 
  * @param {string} whiteboardID ID of the whiteboard the user wants to join
- * @param {string} userID ID of the requesting user
  */
 export async function requestToJoinWhiteboard(whiteboardID) {
     const user = currentUser();
     if (!user) throw Error('User is not signed in');
 
+    const userData = await getUserProfile(user.uid);
+    if (!userData) throw Error("User is not initialized");
+
     await db.collection('whiteboards').doc(whiteboardID)
         .collection('join-requests').doc(user.uid).set({
             userID: user.uid,
             timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-            whiteboardID
+            whiteboardID,
+            username: userData.username
         });
 }
 
@@ -123,7 +126,7 @@ export async function requestToJoinWhiteboard(whiteboardID) {
  *
  * @param {{ id: string, name: string, members: string[], mods: string[], owner: string }[]} whiteboards
  * List of joined whiteboards (can be obtained using `getJoinedWhiteboards()`).
- * @returns {Promise<{ userID: string, whiteboardID: string, whiteboardName: string }[]>}
+ * @returns {Promise<{ userID: string, username: string, whiteboardID: string, whiteboardName: string }[]>}
  * List of join requests on the provided whiteboards that the signed in user can accept.
  */
 export async function getPendingJoinRequests(whiteboards) {
@@ -131,8 +134,8 @@ export async function getPendingJoinRequests(whiteboards) {
     if (!user) throw Error('User is not signed in');
     
     // Get all whiteboards that the user owns or moderates
-    const boardNames = {}
-    const boardIDs = []
+    const boardNames = {};
+    const boardIDs = [];
     for (let i = 0; i < whiteboards.length; i++) {
         const board = whiteboards[i];
         if (user.uid == board.owner || board.mods.includes(user.uid)) {
@@ -154,7 +157,8 @@ export async function getPendingJoinRequests(whiteboards) {
         snap.docs.map(doc => ({
             whiteboardID: boardIDs[i],
             userID: doc.data().userID,
-            whiteboardName: boardNames[boardIDs[i]]
+            whiteboardName: boardNames[boardIDs[i]],
+            username: doc.data().username || doc.data().userID
         }))
     );
 }
@@ -211,6 +215,16 @@ export async function promoteToMod(whiteboardID, userID) {
 }
 
 /**
+ * Demotes a moderator back to a regular member. Only the owner can do this.
+ *
+ * @param {string} whiteboardID
+ * @param {string} userID ID of the mod being demoted
+ */
+export async function demoteFromMod(whiteboardID, userID) {
+    await post('/api/setUserRole', { whiteboardID, userID, role: 'member' });
+}
+
+/**
  * Promotes either a member or a mod to become the owner.
  * 
  * @param {string} whiteboardID The whiteboard the user is being promoted on
@@ -218,6 +232,32 @@ export async function promoteToMod(whiteboardID, userID) {
  */
 export async function transferOwnership(whiteboardID, userID) {
     await post('/api/setUserRole', { whiteboardID, userID, role: 'owner' });
+}
+
+/**
+ * Kicks a user from a whiteboard. Owners can kick anyone; mods can kick members.
+ *
+ * @param {string} whiteboardID
+ * @param {string} userID User to kick
+ */
+export async function kickUser(whiteboardID, userID) {
+    await post('/api/kickUser', { whiteboardID, userID });
+}
+
+/**
+ * Subscribes to live updates of the whiteboard's members subcollection.
+ *
+ * @param {string} whiteboardID
+ * @param {{ onUpdate: (members: { uid: string, username: string, role: string }[]) => void, onError: (err: Error) => void }} callbacks
+ * @returns {() => void} Unsubscribe function
+ */
+export function subscribeToMembers(whiteboardID, { onUpdate, onError }) {
+    return db.collection('whiteboards').doc(whiteboardID)
+        .collection('members')
+        .onSnapshot(
+            (snap) => onUpdate(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }))),
+            onError
+        );
 }
 
 /**

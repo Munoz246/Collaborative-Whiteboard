@@ -15,6 +15,7 @@ import {
   sendGroupChatMessage,
   subscribeToRecentGroupChat,
 } from "./groupChatService.js";
+import { kickUser, promoteToMod, demoteFromMod, transferOwnership, subscribeToMembers } from "./firestore.js";
 
 /**
  * Milliseconds for ordering: server time, or local fallback while `createdAt` is still null.
@@ -432,17 +433,225 @@ export function mountGroupChatPanel({ boardId, user, meta, registerDisposer }) {
     overlayObserver.observe(overlayEl, { attributes: true, attributeFilter: ["class"] });
   }
 
+  // --- Members tab ---
+  const chatTabBtn = document.getElementById("chatTabBtn");
+  const membersTabBtn = document.getElementById("membersTabBtn");
+  const chatTabPanel = document.getElementById("chatTabPanel");
+  const membersTabPanel = document.getElementById("membersTabPanel");
+  const membersListEl = document.getElementById("membersList");
+  const membersStatusEl = document.getElementById("membersStatus");
+
+  let unsubMembers = null;
+
+  function setMembersStatus(text, isError) {
+    if (!membersStatusEl) return;
+    membersStatusEl.textContent = text || "";
+    membersStatusEl.classList.toggle("chat-status--error", !!isError);
+  }
+
+  /** Currently open dropdown, detached from its row and mounted on body. */
+  let activeMenuDropdown = null;
+
+  function closeMemberMenu() {
+    if (!activeMenuDropdown) return;
+    activeMenuDropdown.hidden = true;
+    activeMenuDropdown.remove();
+    activeMenuDropdown = null;
+  }
+
+  function openMemberMenu(trigger, dropdown) {
+    closeMemberMenu();
+    const rect = trigger.getBoundingClientRect();
+    dropdown.style.top = `${rect.bottom + 4}px`;
+    dropdown.style.right = `${window.innerWidth - rect.right}px`;
+    dropdown.hidden = false;
+    document.body.append(dropdown);
+    activeMenuDropdown = dropdown;
+  }
+
+  function renderMemberRow(member) {
+    const li = document.createElement("li");
+    li.className = "member-row";
+
+    const info = document.createElement("div");
+    info.className = "member-info";
+
+    const isOnline =
+      member.lastSeen != null &&
+      typeof member.lastSeen.toMillis === "function" &&
+      Date.now() - member.lastSeen.toMillis() < 90_000;
+
+    const dot = document.createElement("span");
+    dot.className = isOnline ? "member-status member-status--online" : "member-status";
+    dot.title = isOnline ? "Online" : "Offline";
+    dot.setAttribute("aria-label", isOnline ? "Online" : "Offline");
+
+    const name = document.createElement("span");
+    name.className = "member-name";
+    name.textContent = member.username || member.uid;
+
+    const roleBadge = document.createElement("span");
+    roleBadge.className = `member-role member-role--${member.role}`;
+    roleBadge.textContent = member.role;
+
+    info.append(dot, name, roleBadge);
+    li.append(info);
+
+    const isSelf = member.uid === user.uid;
+    const isCallerOwner = meta.owner === user.uid;
+    const isCallerMod = mods.includes(user.uid);
+    const isTargetOwner = member.role === "owner";
+    const isTargetMod = member.role === "mod";
+
+    /** @type {{ label: string, danger?: boolean, confirm?: string, action: () => Promise<void> }[]} */
+    const menuItems = [];
+
+    if (!isSelf && !isTargetOwner) {
+      if ((isCallerOwner || isCallerMod) && !isTargetMod) {
+        menuItems.push({
+          label: "Make mod",
+          action: () => promoteToMod(boardId, member.uid),
+        });
+      }
+
+      if (isCallerOwner && isTargetMod) {
+        menuItems.push({
+          label: "Demote to member",
+          action: () => demoteFromMod(boardId, member.uid),
+        });
+      }
+
+      if (isCallerOwner) {
+        menuItems.push({
+          label: "Transfer ownership",
+          confirm: `Transfer ownership to ${member.username || member.uid}? You will become a mod.`,
+          action: () => transferOwnership(boardId, member.uid),
+        });
+      }
+
+      if (isCallerOwner || (isCallerMod && !isTargetMod)) {
+        menuItems.push({
+          label: "Kick",
+          danger: true,
+          confirm: `Kick ${member.username || member.uid}?`,
+          action: () => kickUser(boardId, member.uid),
+        });
+      }
+    }
+
+    if (menuItems.length === 0) return li;
+
+    const menuWrap = document.createElement("div");
+    menuWrap.className = "member-menu";
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "member-menu-btn";
+    trigger.setAttribute("aria-label", "Member options");
+    trigger.textContent = "⋯";
+
+    const dropdown = document.createElement("ul");
+    dropdown.className = "member-menu__dropdown";
+    dropdown.hidden = true;
+
+    for (const item of menuItems) {
+      const itemLi = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "member-menu__item" + (item.danger ? " member-menu__item--danger" : "");
+      btn.textContent = item.label;
+      btn.addEventListener("click", async () => {
+        dropdown.hidden = true;
+        if (item.confirm && !confirm(item.confirm)) return;
+        btn.disabled = true;
+        setMembersStatus("");
+        try {
+          await item.action();
+        } catch (e) {
+          setMembersStatus(e?.message || "Action failed.", true);
+          btn.disabled = false;
+        }
+      });
+      itemLi.append(btn);
+      dropdown.append(itemLi);
+    }
+
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (activeMenuDropdown === dropdown) {
+        closeMemberMenu();
+      } else {
+        openMemberMenu(trigger, dropdown);
+      }
+    });
+
+    menuWrap.append(trigger);
+    li.append(menuWrap);
+    return li;
+  }
+
+  function activateChatTab() {
+    if (chatTabPanel) chatTabPanel.hidden = false;
+    if (membersTabPanel) membersTabPanel.hidden = true;
+    chatTabBtn?.classList.add("chat-tab--active");
+    chatTabBtn?.setAttribute("aria-selected", "true");
+    membersTabBtn?.classList.remove("chat-tab--active");
+    membersTabBtn?.setAttribute("aria-selected", "false");
+  }
+
+  function activateMembersTab() {
+    if (chatTabPanel) chatTabPanel.hidden = true;
+    if (membersTabPanel) membersTabPanel.hidden = false;
+    membersTabBtn?.classList.add("chat-tab--active");
+    membersTabBtn?.setAttribute("aria-selected", "true");
+    chatTabBtn?.classList.remove("chat-tab--active");
+    chatTabBtn?.setAttribute("aria-selected", "false");
+
+    if (!unsubMembers && membersListEl) {
+      setMembersStatus("Loading…");
+      const roleOrder = { owner: 0, mod: 1, member: 2 };
+      unsubMembers = subscribeToMembers(boardId, {
+        onUpdate: (members) => {
+          closeMemberMenu();
+          members.sort(
+            (a, b) =>
+              (roleOrder[a.role] ?? 3) - (roleOrder[b.role] ?? 3) ||
+              (a.username || "").localeCompare(b.username || "")
+          );
+          membersListEl.replaceChildren(...members.map(renderMemberRow));
+          setMembersStatus("");
+        },
+        onError: (err) => {
+          console.error("Members subscription:", err);
+          setMembersStatus("Could not load members.", true);
+        },
+      });
+    }
+  }
+
+  if (chatTabBtn) chatTabBtn.addEventListener("click", activateChatTab);
+  if (membersTabBtn) membersTabBtn.addEventListener("click", activateMembersTab);
+
+  const onDocClick = () => closeMemberMenu();
+  document.addEventListener("click", onDocClick);
+
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     unsubChat?.();
     unsubChat = null;
+    unsubMembers?.();
+    unsubMembers = null;
     overlayObserver?.disconnect();
     overlayObserver = null;
+    closeMemberMenu();
+    document.removeEventListener("click", onDocClick);
     sendBtn.removeEventListener("click", sendFromInput);
     inputEl.removeEventListener("keydown", onInputKeydown);
     if (loadOlderBtn) loadOlderBtn.removeEventListener("click", onLoadOlderClick);
     if (retryBtn) retryBtn.removeEventListener("click", onRetryClick);
+    if (chatTabBtn) chatTabBtn.removeEventListener("click", activateChatTab);
+    if (membersTabBtn) membersTabBtn.removeEventListener("click", activateMembersTab);
   };
   registerDisposer(dispose);
   window.addEventListener("beforeunload", dispose, { once: true });

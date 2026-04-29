@@ -20,7 +20,7 @@ let notifPanel = null;
  * Clears and populates the notification content list, and updates the alert
  * badge on the notification button.
  * 
- * @param {{ userID: string, whiteboardID: string, whiteboardName: string }[]} pendingRequests
+ * @param {{ userID: string, username: string, whiteboardID: string, whiteboardName: string }[]} pendingRequests
  */
 function renderNotifications(pendingRequests) {
     const badge = document.getElementById('notifBadge');
@@ -53,7 +53,7 @@ function renderNotifications(pendingRequests) {
 
         const user = document.createElement('span');
         user.className = 'notif-item-user';
-        user.textContent = req.userID.slice(0, 10) + '\u2026';
+        user.textContent = req.username.slice(0, 10) + (req.username.length > 10 ? '\u2026' : '');
 
         info.append(board, user);
 

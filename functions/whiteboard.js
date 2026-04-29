@@ -308,6 +308,65 @@ exports.addUserToWhiteboard = onRequest({ invoker: "public" }, async (req, res) 
     }
 });
 
+exports.kickUser = onRequest({ invoker: "public" }, async (req, res) => {
+    try {
+        if (req.method !== "POST") {
+            res.status(405).json({ error: "POST only" });
+            return;
+        }
+
+        const user = await requireAuth(req);
+        const { whiteboardID, userID } = req.body || {};
+
+        if (!whiteboardID) throw new Error("Missing whiteboardID");
+        if (!userID) throw new Error("Missing userID");
+        if (userID === user.uid) throw new Error("Cannot kick yourself. Use leaveWhiteboard instead");
+
+        const db = admin.firestore();
+        const wbRef = db.doc(`whiteboards/${whiteboardID}`);
+        const memberRef = db.doc(`whiteboards/${whiteboardID}/members/${userID}`);
+        const targetUserRef = db.doc(`users/${userID}`);
+
+        await db.runTransaction(async (tx) => {
+            const [wbSnap, memberSnap] = await Promise.all([
+                tx.get(wbRef),
+                tx.get(memberRef),
+            ]);
+
+            if (!wbSnap.exists) throw new Error("Whiteboard not found");
+            // if (!memberSnap.exists) throw new Error("Target user is not a member of this whiteboard");
+
+            const wb = wbSnap.data();
+            const isCallerOwner = wb.owner === user.uid;
+            const isCallerMod = wb.mods.includes(user.uid);
+
+            if (!isCallerOwner && !isCallerMod) throw new Error("Only owners and mods can kick users");
+
+            const isTargetOwner = wb.owner === userID;
+            const isTargetMod = wb.mods.includes(userID);
+
+            if (isTargetOwner) throw new Error("Cannot kick the owner");
+            if (isCallerMod && isTargetMod) throw new Error("Mods cannot kick other mods");
+
+            tx.update(wbRef, {
+                members: admin.firestore.FieldValue.arrayRemove(userID),
+                mods: admin.firestore.FieldValue.arrayRemove(userID),
+            });
+
+            tx.update(targetUserRef, {
+                joinedWhiteboards: admin.firestore.FieldValue.arrayRemove(whiteboardID),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+
+            tx.delete(memberRef);
+        });
+
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
 exports.setUserRole = onRequest({ invoker: "public" }, async (req, res) => {
     try {
         if (req.method !== "POST") {
@@ -333,7 +392,7 @@ exports.setUserRole = onRequest({ invoker: "public" }, async (req, res) => {
             ]);
 
             if (!wbSnap.exists) throw new Error("Whiteboard not found");
-            if (!memberSnap.exists) throw new Error("User does not have a member document");
+            // if (!memberSnap.exists) throw new Error("User does not have a member document");
 
             const wb = wbSnap.data();
             if (!wb.members.includes(userID)) throw new Error("User is not a member of this whiteboard")

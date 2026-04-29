@@ -348,6 +348,9 @@ service cloud.firestore {
       match /members/{userId} {
         allow read: if isMember(getWhiteboard(boardId));
         allow write: if isOwnerOrMod(getWhiteboard(boardId));
+        // Members may stamp/clear their own lastSeen for presence tracking.
+        allow update: if request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen']);
       }
 
       // Per-board group chat; members read/write per rules below (no hard deletes).
