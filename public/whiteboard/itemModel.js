@@ -64,9 +64,18 @@ function pickTypeData(localItem) {
   if (localItem.type === "file") {
     return {
       file: {
-        documentId: localItem.content?.documentId ?? "",
+        fileId: localItem.content?.fileId ?? localItem.content?.documentId ?? "",
+        documentId: localItem.content?.documentId ?? localItem.content?.fileId ?? "",
+        storagePath: localItem.content?.storagePath ?? "",
         fileName: localItem.content?.fileName ?? "",
-        fileType: localItem.content?.fileType ?? "",
+        fileType: localItem.content?.fileType ?? localItem.content?.mimeType ?? "",
+        mimeType: localItem.content?.mimeType ?? localItem.content?.fileType ?? "",
+        fileSize: localItem.content?.fileSize ?? 0,
+        viewerKind: localItem.content?.viewerKind ?? "unsupported",
+        currentPage: localItem.content?.currentPage ?? 1,
+        totalPages: localItem.content?.totalPages ?? 1,
+        zoomLevel: localItem.content?.zoomLevel ?? 1,
+        minimized: !!localItem.content?.minimized,
       },
     };
   }
@@ -140,14 +149,22 @@ export function fromFirestoreItem(doc) {
     };
     content = { text: noteData.text ?? "" };
   } else if (fileData) {
-    // Render files as text placeholders until dedicated file UI is implemented.
-    type = "text";
-    style = {
-      fill: "#111827",
-      fontSize: 16,
-      textAlign: "left",
+    type = "file";
+    style = {};
+    content = {
+      fileId: fileData.fileId ?? fileData.documentId ?? "",
+      documentId: fileData.documentId ?? fileData.fileId ?? "",
+      storagePath: fileData.storagePath ?? "",
+      fileName: fileData.fileName ?? "Untitled file",
+      fileType: fileData.fileType ?? fileData.mimeType ?? "",
+      mimeType: fileData.mimeType ?? fileData.fileType ?? "",
+      fileSize: fileData.fileSize ?? 0,
+      viewerKind: fileData.viewerKind ?? "unsupported",
+      currentPage: fileData.currentPage ?? 1,
+      totalPages: fileData.totalPages ?? 1,
+      zoomLevel: fileData.zoomLevel ?? 1,
+      minimized: !!fileData.minimized,
     };
-    content = { text: fileData.fileName ? `[File] ${fileData.fileName}` : "[File]" };
   } else if (isShapeType(data.type)) {
     const fallbackKind = normalizeShapeKind(data.type);
     type = fallbackKind;

@@ -144,17 +144,37 @@ export class FabricRenderer {
         }
         return;
       }
-      this.syncElementFromFabricObject(elementId);
+      this.syncElementFromFabricObject(elementId, {
+        releaseLock: !!obj.__wbLockDuringTransform,
+      });
+      obj.__wbLockDuringTransform = false;
+    };
+    this._onObjectTransforming = (evt) => {
+      const obj = evt.target;
+      if (!obj) return;
+      const elementId = obj.__elementId;
+      if (!elementId || obj.__wbLockDuringTransform) return;
+      const element = this.store?.getElement?.(elementId);
+      if (!element || element.isLocked) return;
+      obj.__wbLockDuringTransform = true;
+      obj.__allowLockedTransform = true;
+      this.store.updateElement(elementId, { isLocked: true });
     };
 
     // Keep state management synchronized when users transform objects.
     this.canvas.on("object:modified", this._onObjectModified);
+    this.canvas.on("object:moving", this._onObjectTransforming);
+    this.canvas.on("object:scaling", this._onObjectTransforming);
+    this.canvas.on("object:rotating", this._onObjectTransforming);
   }
 
   /** Detach Fabric listeners before canvas.dispose() (see WhiteboardModule.destroy). */
   destroy() {
     if (this.canvas && this._onObjectModified) {
       this.canvas.off("object:modified", this._onObjectModified);
+      this.canvas.off("object:moving", this._onObjectTransforming);
+      this.canvas.off("object:scaling", this._onObjectTransforming);
+      this.canvas.off("object:rotating", this._onObjectTransforming);
     }
     this.fabricById.clear();
     this.canvas = null;
@@ -331,9 +351,15 @@ export class FabricRenderer {
     if (element.type === "file") {
       obj.set({
         ...common,
-        text: element.content?.fileName || "File",
-        width: element.size?.w ?? 180,
+        width: element.size?.w ?? 320,
+        height: element.size?.h ?? 420,
+        scaleX: 1,
+        scaleY: 1,
+        fill: "rgba(255, 255, 255, 0.05)",
+        stroke: "rgba(17, 24, 39, 0.3)",
+        strokeWidth: 1,
       });
+      return;
     }
   }
 
@@ -431,12 +457,13 @@ export class FabricRenderer {
       });
       setCommonControls(obj);
     } else if (element.type === "file") {
-      obj = new fabric.Textbox(element.content?.fileName || "File", {
+      obj = new fabric.Rect({
         ...common,
-        width: element.size.w || 180,
-        fill: "#111827",
-        fontSize: 16,
-        editable: false,
+        width: element.size.w || 320,
+        height: element.size.h || 420,
+        fill: "rgba(255, 255, 255, 0.05)",
+        stroke: "rgba(17, 24, 39, 0.3)",
+        strokeWidth: 1,
       });
       setCommonControls(obj);
     } else {
@@ -461,7 +488,7 @@ export class FabricRenderer {
 
     const element = this.store.getElement(elementId);
     if (!element) return;
-    if (element.isLocked) {
+    if (element.isLocked && !obj.__allowLockedTransform) {
       // Locked items should never be transformed locally.
       obj.set({
         left: element.position?.x ?? obj.left ?? 0,
@@ -576,6 +603,20 @@ export class FabricRenderer {
         w: Math.max(1, geomW),
         h: Math.max(1, geomH),
       };
+    } else if (element.type === "file") {
+      const geomW = (obj.width ?? 1) * (obj.scaleX ?? 1);
+      const geomH = (obj.height ?? 1) * (obj.scaleY ?? 1);
+      nextSize = {
+        w: Math.max(220, geomW),
+        h: Math.max(220, geomH),
+      };
+      obj.set({
+        width: nextSize.w,
+        height: nextSize.h,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      obj.setCoords();
     }
 
     this.store.updateElement(elementId, {
@@ -584,6 +625,8 @@ export class FabricRenderer {
       size: nextSize,
       style: nextStyle,
       content: nextContent,
+      isLocked: options.releaseLock ? false : element.isLocked,
     });
+    obj.__allowLockedTransform = false;
   }
 }

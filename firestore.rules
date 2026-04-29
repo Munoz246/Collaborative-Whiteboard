@@ -114,10 +114,32 @@ service cloud.firestore {
 
     function validFileData(fileData) {
       return fileData is map
-        && fileData.keys().hasOnly(['documentId', 'fileName', 'fileType'])
+        && fileData.keys().hasOnly([
+          'fileId',
+          'documentId',
+          'storagePath',
+          'fileName',
+          'fileType',
+          'mimeType',
+          'fileSize',
+          'viewerKind',
+          'currentPage',
+          'totalPages',
+          'zoomLevel',
+          'minimized'
+        ])
+        && (!('fileId' in fileData) || fileData.fileId is string)
         && (!('documentId' in fileData) || fileData.documentId is string)
+        && (!('storagePath' in fileData) || fileData.storagePath is string)
         && (!('fileName' in fileData) || fileData.fileName is string)
-        && (!('fileType' in fileData) || fileData.fileType is string);
+        && (!('fileType' in fileData) || fileData.fileType is string)
+        && (!('mimeType' in fileData) || fileData.mimeType is string)
+        && (!('fileSize' in fileData) || (fileData.fileSize is number && fileData.fileSize >= 0))
+        && (!('viewerKind' in fileData) || fileData.viewerKind in ['pdf', 'text', 'unsupported'])
+        && (!('currentPage' in fileData) || (fileData.currentPage is number && fileData.currentPage >= 1))
+        && (!('totalPages' in fileData) || (fileData.totalPages is number && fileData.totalPages >= 1))
+        && (!('zoomLevel' in fileData) || (fileData.zoomLevel is number && fileData.zoomLevel >= 0.25 && fileData.zoomLevel <= 6))
+        && (!('minimized' in fileData) || fileData.minimized is bool);
     }
 
     function validItemData(itemType, data) {
@@ -306,6 +328,11 @@ service cloud.firestore {
             || resource.data.updatedBy == request.auth.uid
             || isOwnerOrMod(getWhiteboard(boardId))
           );
+      }
+
+      // Whiteboard file metadata docs. File binaries live in Storage.
+      match /files/{fileId} {
+        allow read, create, update, delete: if isMember(getWhiteboard(boardId));
       }
 
       // Requests from non-members who want to join a whiteboard.

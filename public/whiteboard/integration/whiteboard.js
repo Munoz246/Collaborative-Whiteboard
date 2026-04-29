@@ -21,6 +21,8 @@ import {
   getWhiteboardFileDownloadUrl,
   deleteWhiteboardFile,
 } from "../fileManager.js";
+import { createWhiteboardFileItem, isViewableFile } from "../fileItemService.js?v=shape-style-v3";
+import { FileViewerLayer } from "../fileViewerLayer.js?v=shape-style-v3";
 
 let activeWhiteboard = null;
 
@@ -269,8 +271,9 @@ function initOverlayPanels(boardID, user, meta) {
   document.getElementById('newBoardBtn').addEventListener('click', onNewBoardClick);
 
   initAIPanel(boardID);
-  initFileManager(boardID);
+  initFileManager(boardID, user, activeWhiteboard);
   initSharePanel(boardID, user, meta);
+  initFileViewerLayer(activeWhiteboard);
 }
 
 /**
@@ -497,7 +500,20 @@ function initSharePanel(boardID, user, meta) {
   });
 }
 
-function initFileManager(boardID) {
+function initFileViewerLayer(whiteboard) {
+  if (!whiteboard?.store) return;
+  const host = document.getElementById("whiteboardFileViewerLayer");
+  if (!host) return;
+  const layer = new FileViewerLayer({
+    rootEl: host,
+    store: whiteboard.store,
+    canvas: whiteboard.canvas,
+  });
+  layer.attach();
+  whiteboard.registerDisposer(() => layer.detach());
+}
+
+function initFileManager(boardID, user, whiteboard) {
   const uploadBtn = document.getElementById("uploadWhiteboardFileBtn");
   const fileInput = document.getElementById("whiteboardFileInput");
   const fileList = document.getElementById("whiteboardFileList");
@@ -574,6 +590,31 @@ function initFileManager(boardID) {
           window.open(url, "_blank", "noopener");
         });
 
+        const viewBtn = document.createElement("button");
+        viewBtn.type = "button";
+        viewBtn.className = "btn btn-sm btn-outline-primary";
+        viewBtn.textContent = "View";
+        if (!isViewableFile(file)) {
+          viewBtn.disabled = true;
+          viewBtn.title = "Only PDF and text files can be viewed on the canvas.";
+        }
+        viewBtn.addEventListener("click", async () => {
+          if (!whiteboard?.store || !user?.uid) return;
+          try {
+            await createWhiteboardFileItem({
+              boardId: boardID,
+              userId: user.uid,
+              store: whiteboard.store,
+              canvas: whiteboard.canvas,
+              fileDoc: file,
+            });
+            if (statusEl) statusEl.textContent = "Added file viewer to whiteboard.";
+          } catch (err) {
+            console.error(err);
+            if (statusEl) statusEl.textContent = err.message || "Could not place file on whiteboard.";
+          }
+        });
+
         // delete
         const deleteBtn = document.createElement("button");
         deleteBtn.type = "button";
@@ -584,7 +625,7 @@ function initFileManager(boardID) {
           await deleteWhiteboardFile(boardID, file.id, file.storagePath);
         });
 
-        actions.append(downloadBtn, deleteBtn);
+        actions.append(viewBtn, downloadBtn, deleteBtn);
         item.append(info, actions);
         fileList.appendChild(item);
       }

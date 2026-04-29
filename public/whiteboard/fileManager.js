@@ -6,6 +6,24 @@ const storage = window.firebase.storage();
 const ALLOWED_EXTENSIONS = [".txt", ".pdf", ".doc"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
+function normalizeMimeType(file) {
+  const ext = getExtension(file?.name || "");
+  const type = String(file?.type || "").trim().toLowerCase();
+  if (type) return type;
+  if (ext === ".pdf") return "application/pdf";
+  if (ext === ".txt") return "text/plain";
+  if (ext === ".doc") return "application/msword";
+  return "application/octet-stream";
+}
+
+function resolvePreviewKind(mimeType, extension) {
+  const ext = String(extension || "").toLowerCase();
+  const mime = String(mimeType || "").toLowerCase();
+  if (mime === "application/pdf" || ext === ".pdf") return "pdf";
+  if (mime.startsWith("text/") || mime === "text/plain" || ext === ".txt") return "text";
+  return "unsupported";
+}
+
 function filesCollection(boardId) {
   return db.collection("whiteboards").doc(boardId).collection("files");
 }
@@ -60,8 +78,11 @@ export async function uploadWhiteboardFiles(boardId, fileList) {
 
     const storageRef = storage.ref(storagePath);
 
+    const normalizedMimeType = normalizeMimeType(file);
+    const extension = getExtension(file.name);
+    const previewKind = resolvePreviewKind(normalizedMimeType, extension);
     await storageRef.put(file, {
-      contentType: file.type || "application/octet-stream",
+      contentType: normalizedMimeType,
       customMetadata: {
         boardId,
         uploadedBy: user.uid,
@@ -73,8 +94,10 @@ export async function uploadWhiteboardFiles(boardId, fileList) {
       name: file.name,
       storagePath,
       size: file.size,
-      type: file.type || "",
-      extension: getExtension(file.name),
+      type: normalizedMimeType,
+      normalizedMimeType,
+      extension,
+      previewKind,
       uploadedBy: user.uid,
       createdAt: window.firebase.firestore.FieldValue.serverTimestamp(),
     });

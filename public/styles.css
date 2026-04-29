@@ -699,6 +699,144 @@ body {
   flex-shrink: 0;
 }
 
+/* -- In-canvas file viewers -- */
+.wb-file-viewer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+}
+
+.wb-file-viewer {
+  position: absolute;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.25);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.wb-file-viewer__header {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.12);
+  background: rgba(243, 244, 246, 0.94);
+  pointer-events: none;
+}
+
+.wb-file-viewer__title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-file-viewer__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  pointer-events: auto;
+}
+
+.wb-file-viewer__btn {
+  border: 1px solid rgba(17, 24, 39, 0.2);
+  border-radius: 7px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 5px 7px;
+}
+
+.wb-file-viewer__btn:disabled {
+  opacity: 0.45;
+}
+
+.wb-file-viewer__page {
+  font-size: 0.72rem;
+  color: #374151;
+  min-width: 76px;
+  text-align: center;
+}
+
+.wb-file-viewer__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.wb-file-viewer__status {
+  min-height: 20px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  color: #6b7280;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.wb-file-viewer__content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+  pointer-events: auto;
+}
+
+.wb-file-viewer__text {
+  margin: 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.wb-file-viewer__pdf-page {
+  position: relative;
+  margin: 0 auto;
+  background: #fff;
+}
+
+.wb-file-viewer__pdf-canvas {
+  display: block;
+}
+
+.wb-file-viewer__pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  user-select: text;
+}
+
+.wb-file-viewer__frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.wb-file-viewer.is-minimized {
+  height: auto !important;
+}
+
+.wb-file-viewer.is-minimized .wb-file-viewer__body {
+  display: none;
+}
+
 /* Override legacy sidebar chat/board list styles inside HUD panels */
 .hud-board-list.board-list li.hud-placeholder-row {
   border: none;
