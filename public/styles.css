@@ -2121,6 +2121,31 @@ a.dashboard-board-card-link:focus-visible {
   filter: brightness(1.03);
 }
 
+/* ---- Shared whiteboard toast ---- */
+.wb-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: rgba(17, 24, 39, 0.9);
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+  z-index: 10200;
+  white-space: nowrap;
+}
+
+.wb-toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 .board-settings-toast {
   position: fixed;
   bottom: 32px;

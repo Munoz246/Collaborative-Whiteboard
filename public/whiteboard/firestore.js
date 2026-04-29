@@ -46,6 +46,24 @@ export async function createWhiteboard(_userID, name) {
 }
 
 /**
+ * Subscribes to live updates of a whiteboard document.
+ *
+ * @param {string} boardId
+ * @param {{ onUpdate: (board: { id: string, name: string, members: string[], mods: string[], owner: string }) => void, onError?: (err: Error) => void }} callbacks
+ * @returns {() => void} Unsubscribe function
+ */
+export function subscribeToWhiteboard(boardId, { onUpdate, onError }) {
+    return db.collection('whiteboards').doc(boardId)
+        .onSnapshot(
+            (snap) => {
+                if (!snap.exists) return;
+                onUpdate({ id: snap.id, ...snap.data() });
+            },
+            onError ?? console.error
+        );
+}
+
+/**
  * Read a single whiteboard document (e.g. workspace title).
  *
  * @param {string} boardId Firestore document id

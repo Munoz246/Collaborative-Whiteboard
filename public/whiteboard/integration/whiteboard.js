@@ -10,11 +10,12 @@ import { OverlayManager } from "../overlays/OverlayManager.js";
 import { BaseOverlayPanel } from "../overlays/BaseOverlayPanel.js";
 import { currentUser, mountAuthUI } from "../auth.js";
 import { refreshWhiteboardList } from "../renderer.js";
-import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById, requestToJoinWhiteboard, addUserToWhiteboard } from "../firestore.js";
+import { createWhiteboard, getJoinedWhiteboards, getWhiteboardById, subscribeToWhiteboard, requestToJoinWhiteboard, addUserToWhiteboard } from "../firestore.js";
 import { initNotifications } from "../notifications.js";
 import { createItem, deleteItem, subscribeToItems, updateItem } from "../itemSyncService.js?v=shape-style-v3";
 import { mountGroupChatPanel } from "../groupChatPanel.js";
 import { startPresence } from "../presence.js";
+import { showToast } from "../utils.js";
 import { toggleBoardSettingsMenu } from "../boardSettingsMenu.js";
 import {
   subscribeToWhiteboardFiles,
@@ -52,7 +53,7 @@ async function initPage(user, boardID) {
 
   const titleEl = document.getElementById("boardTitle");
   if (titleEl) titleEl.textContent = meta.name;
-  
+
   getJoinedWhiteboards().then(boards => {
     refreshWhiteboardList(boards);
     initNotifications(boards);
@@ -63,6 +64,38 @@ async function initPage(user, boardID) {
   attachRealtimeItemSync(whiteboard, boardID, user.uid);
 
   whiteboard.registerDisposer(startPresence(boardID, user.uid));
+
+  const getRole = (board) =>
+    board.owner === user.uid ? "owner" : (board.mods ?? []).includes(user.uid) ? "mod" : "member";
+
+  const ROLE_MESSAGES = {
+    "member->mod":    "You have been promoted to moderator.",
+    "mod->member":    "You have been demoted to member.",
+    "mod->owner":     "You are now the owner of this board.",
+    "member->owner":  "You are now the owner of this board.",
+    "owner->mod":     "Ownership transferred. You are now a moderator.",
+    "owner->member":  "Ownership transferred. You are now a member.",
+  };
+
+  let prevRole = getRole(meta);
+
+  whiteboard.registerDisposer(subscribeToWhiteboard(boardID, {
+    onUpdate: (board) => {
+      if (!board.members.includes(user.uid)) {
+        window.location.replace("index.html");
+        return;
+      }
+
+      const nextRole = getRole(board);
+      if (nextRole !== prevRole) {
+        const msg = ROLE_MESSAGES[`${prevRole}->${nextRole}`];
+        if (msg) showToast(msg);
+        prevRole = nextRole;
+      }
+
+      if (titleEl) titleEl.textContent = board.name;
+    },
+  }));
 
   mountGroupChatPanel({
     boardId: boardID,

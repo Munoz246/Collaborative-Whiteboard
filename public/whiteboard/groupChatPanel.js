@@ -610,14 +610,29 @@ export function mountGroupChatPanel({ boardId, user, meta, registerDisposer }) {
     if (!unsubMembers && membersListEl) {
       setMembersStatus("Loading…");
       const roleOrder = { owner: 0, mod: 1, member: 2 };
+      let prevMemberStateKey = null;
       unsubMembers = subscribeToMembers(boardId, {
         onUpdate: (members) => {
-          closeMemberMenu();
+          // Sort member list by role
           members.sort(
             (a, b) =>
               (roleOrder[a.role] ?? 3) - (roleOrder[b.role] ?? 3) ||
               (a.username || "").localeCompare(b.username || "")
           );
+          // To avoid refreshing the list on every lastSeen ping, create a key
+          // that tracks actual changes.
+          const stateKey = members
+            .map((m) => {
+              const isOnline =
+                m.lastSeen != null &&
+                typeof m.lastSeen.toMillis === "function" &&
+                Date.now() - m.lastSeen.toMillis() < 90_000;
+              return `${m.uid}:${m.username}:${m.role}:${isOnline}`;
+            })
+            .join("|");
+          if (stateKey === prevMemberStateKey) return;
+          prevMemberStateKey = stateKey;
+          closeMemberMenu();
           membersListEl.replaceChildren(...members.map(renderMemberRow));
           setMembersStatus("");
         },
