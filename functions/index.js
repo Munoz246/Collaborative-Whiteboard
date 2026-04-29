@@ -5,6 +5,10 @@ const crypto = require("crypto");
 const OpenAI = require("openai");
 
 admin.initializeApp();
+
+Object.assign(exports, require("./user.js"));
+Object.assign(exports, require("./whiteboard.js"));
+
 const db = admin.firestore();
 
 const KEY_ENCRYPTION_SECRET = defineSecret("KEY_ENCRYPTION_SECRET");

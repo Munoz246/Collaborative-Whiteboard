@@ -3,9 +3,22 @@
  */
 
 import { currentUser } from "./auth.js";
-import { pickRandom } from "./utils.js";
 
 const db = window.firebase.firestore();
+
+async function post(path, body) {
+    const user = currentUser();
+    if (!user) throw new Error("Not signed in");
+    const token = await user.getIdToken();
+    const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Request failed");
+    return data;
+}
 
 /**
  * Create a new whiteboard, setting the creating user as the owner.
@@ -14,19 +27,9 @@ const db = window.firebase.firestore();
  * @param {string} name Whiteboard name
  * @returns {Promise<string>} ID of the newly created whiteboard
  */
-export async function createWhiteboard(userID, name) {
-    // Simultaneously create the whiteboard and set userID as the owner.
-    // Note: This approach works best with the Firestore security roles.
-    const newWB = db.collection('whiteboards').doc();
-
-    await newWB.set({
-        name,
-        members: [ userID ],
-        mods: [],
-        owner: userID
-    });
-    
-    return newWB.id;
+export async function createWhiteboard(_userID, name) {
+    const { whiteboardID } = await post('/api/createWhiteboard', { name });
+    return whiteboardID;
 }
 
 /**
@@ -48,7 +51,7 @@ export async function getWhiteboardById(boardId) {
  * @param {string} whiteboardID Whiteboard to be deleted
  */
 export async function deleteWhiteboard(whiteboardID) {
-    await db.collection('whiteboards').doc(whiteboardID).delete();
+    await post('/api/deleteWhiteboard', { whiteboardID });
 }
 
 /**
@@ -151,19 +154,13 @@ export async function getPendingJoinRequests(whiteboards) {
  * @param {string} userID User being accepted into the whiteboard
  */
 export async function acceptJoinRequest(whiteboardID, userID) {
-    const whiteboardRef = db.collection('whiteboards').doc(whiteboardID);
-    const joinRequestRef = whiteboardRef.collection('join-requests').doc(userID);
+    const joinRequestRef = db.collection('whiteboards').doc(whiteboardID)
+        .collection('join-requests').doc(userID);
 
-    await db.runTransaction(async (transaction) => {
-        const joinRequest = await transaction.get(joinRequestRef);
+    if (!(await joinRequestRef.get()).exists) throw Error('Join request not found');
 
-        if (!joinRequest.exists) throw Error('Join request not found');
-
-        transaction.delete(joinRequestRef);
-        transaction.update(whiteboardRef, {
-            members: window.firebase.firestore.FieldValue.arrayUnion(userID)
-        });
-    });
+    await post('/api/addUserToWhiteboard', { whiteboardID, userID });
+    await joinRequestRef.delete();
 }
 
 /**
@@ -187,9 +184,7 @@ export async function rejectJoinRequest(whiteboardID, userID) {
  * @returns {Promise}
  */
 export async function addUserToWhiteboard(whiteboardID, userID) {
-    await db.collection('whiteboards').doc(whiteboardID).update({
-        'members': window.firebase.firestore.FieldValue.arrayUnion(userID)
-    });
+    await post('/api/addUserToWhiteboard', { whiteboardID, userID });
 }
 
 /**
@@ -199,17 +194,7 @@ export async function addUserToWhiteboard(whiteboardID, userID) {
  * @param userID ID of the member that is being promoted
  */
 export async function promoteToMod(whiteboardID, userID) {
-    const wb = await getWhiteboardById(whiteboardID);
-    if (!wb)
-        throw Error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
-    if (!wb.members.includes(userID))
-        throw Error(`User ${userID} is not a member of whiteboard ${whiteboardID}`);
-    if (wb.owner == userID || wb.mods.includes(userID))
-        throw Error(`User ${userID} is already privileged in whiteboard ${whiteboardID}`);
-
-    await db.collection('whiteboards').doc(whiteboardID).update({
-        mods: [ ...wb.mods, userID ]
-    });
+    await post('/api/setUserRole', { whiteboardID, userID, role: 'mod' });
 }
 
 /**
@@ -219,26 +204,7 @@ export async function promoteToMod(whiteboardID, userID) {
  * @param {string} userID ID of the member that will become the owner
  */
 export async function transferOwnership(whiteboardID, userID) {
-    const wb = await getWhiteboardById(whiteboardID);
-    if (!wb)
-        throw Error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
-    if (!wb.members.includes(userID))
-        throw Error(`User ${userID} is not a member of whiteboard ${whiteboardID}`);
-    if (userID == wb.owner)
-        throw Error(`User ${userID} is already the owner of whiteboard ${whiteboardID}`);
-
-    const payload = {
-        owner: userID,
-        mods: [ ...wb.mods, wb.owner ] // Demote owner to a moderator
-    };
-
-    // If user is a mod, remove them from the mods list
-    if (wb.mods.includes(userID)) {
-        const index = wb.mods.indexOf(userID);
-        payload['mods'].splice(index, 1);
-    }
-
-    await db.collection('whiteboards').doc(whiteboardID).update(payload);
+    await post('/api/setUserRole', { whiteboardID, userID, role: 'owner' });
 }
 
 /**
@@ -250,47 +216,14 @@ export async function transferOwnership(whiteboardID, userID) {
  * @param {string} whiteboardID Whiteboard being left
  */
 export async function leaveWhiteboard(whiteboardID) {
-    const user = currentUser();
-    if (!user) throw Error(`User not signed in`);
-
-    const wb = await getWhiteboardById(whiteboardID);
-    if (!wb) throw Error(`Failed to retrieve information for whiteboard ${whiteboardID}`);
-
-    const payload = {
-        members: wb.members.filter(uid => (uid !== user.uid)) // Remove self from member list
-    };
-
-    // Handle case where the user owns the whiteboard
-    if (user.uid == wb.owner) {
-        if (wb.members.length == 1) {
-            // There are no other users to receive ownership; delete the
-            // whiteboard instead
+    try {
+        await post('/api/leaveWhiteboard', { whiteboardID });
+    } catch (err) {
+        // Backend throws when owner is the last member — delete instead
+        if (err.message.includes('only member')) {
             await deleteWhiteboard(whiteboardID);
-            return;
-        }
-        else {
-            let newOwner;
-            
-            if (wb.mods.length != 0) {
-                // Pick a random mod
-                newOwner = pickRandom(wb.mods);
-
-                // Remove user from mod list
-                payload['mods'] = wb.mods.filter(uid => (uid != newOwner));
-            }
-            else {
-                // Pick a random member
-                newOwner = pickRandom(payload['members']);
-            }
-
-            payload['owner'] = newOwner;
+        } else {
+            throw err;
         }
     }
-    
-    // If user is a mod, remove them from the mod list
-    if (wb.mods.includes(user.uid)) {
-        payload['mods'] = wb.mods.filter(uid => (uid != user.uid));
-    }
-
-    await db.collection('whiteboards').doc(whiteboardID).update(payload);
 }
