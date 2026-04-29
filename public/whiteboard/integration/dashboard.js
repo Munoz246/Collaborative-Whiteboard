@@ -314,7 +314,7 @@ function wireActions() {
 /**
  * @param {import('firebase/auth').User} user
  */
-function initDashboard(user) {
+function initDashboard(_user) {
   wireCreateModal();
   wireJoinModal();
   wireActions();

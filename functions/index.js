@@ -77,7 +77,7 @@ function getResponseText(response) {
 }
 
 exports.saveOpenAiKey = onRequest(
-  { secrets: [KEY_ENCRYPTION_SECRET] },
+  { invoker: "public", secrets: [KEY_ENCRYPTION_SECRET] },
   async (req, res) => {
     try {
       if (req.method !== "POST") {
@@ -109,7 +109,7 @@ exports.saveOpenAiKey = onRequest(
 );
 
 exports.askWhiteboardAssistant = onRequest(
-  { secrets: [KEY_ENCRYPTION_SECRET] },
+  { invoker: "public", secrets: [KEY_ENCRYPTION_SECRET] },
   async (req, res) => {
     try {
       if (req.method !== "POST") {
@@ -327,7 +327,7 @@ exports.askWhiteboardAssistant = onRequest(
 );
 //ai chat history
 exports.getAiHistory = onRequest(
-  { secrets: [KEY_ENCRYPTION_SECRET] },
+  { invoker: "public", secrets: [KEY_ENCRYPTION_SECRET] },
   async (req, res) => {
     try {
       const user = await requireAuth(req);

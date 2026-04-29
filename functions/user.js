@@ -1,6 +1,5 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
 
 const db = () => admin.firestore();
 
@@ -26,7 +25,7 @@ function validUsername(username) {
 
 // POST { username } — Called when a user first signs up. Sets a username, and
 // creates the users/{uid} document.
-exports.initializeUser = onRequest(async (req, res) => {
+exports.initializeUser = onRequest({ invoker: "public" }, async (req, res) => {
   try {
     // Ensure protocol
     if (req.method !== "POST") {
@@ -63,7 +62,7 @@ exports.initializeUser = onRequest(async (req, res) => {
         username,
         joinedWhiteboards: [],
         photoURL: user.picture || null,
-        updatedAt: FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     });
     console.log("Completed");
@@ -76,7 +75,7 @@ exports.initializeUser = onRequest(async (req, res) => {
 
 // POST { username } — claim a username for the first time or update it.
 // Writes users/{uid} and usernames/{username}, deletes the old usernames entry.
-exports.setUsername = onRequest(async (req, res) => {
+exports.setUsername = onRequest({ invoker: "public" }, async (req, res) => {
   try {
     // Ensure protocol
     if (req.method !== "POST") {
@@ -116,7 +115,7 @@ exports.setUsername = onRequest(async (req, res) => {
         {
           username,
           photoURL: user.picture || null, // Update photo (in case it changed)
-          updatedAt: FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true }
       );
@@ -129,7 +128,7 @@ exports.setUsername = onRequest(async (req, res) => {
 });
 
 // POST { username } — check if a username is available without claiming it.
-exports.checkUsername = onRequest(async (req, res) => {
+exports.checkUsername = onRequest({ invoker: "public" }, async (req, res) => {
   try {
     if (req.method !== "POST") {
       res.status(405).json({ error: "POST only" });
@@ -153,25 +152,3 @@ exports.checkUsername = onRequest(async (req, res) => {
   }
 });
 
-// GET — return the current user's profile from Firestore.
-exports.getProfile = onRequest(async (req, res) => {
-  try {
-    if (req.method !== "GET") {
-      res.status(405).json({ error: "GET only" });
-      return;
-    }
-
-    const user = await requireAuth(req);
-    const snap = await db().doc(`users/${user.uid}`).get();
-
-    if (!snap.exists) {
-      res.json({ profile: null });
-      return;
-    }
-
-    const { username, displayName, email, photoURL } = snap.data();
-    res.json({ profile: { username, displayName, email, photoURL } });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});

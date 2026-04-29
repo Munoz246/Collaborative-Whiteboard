@@ -4,8 +4,6 @@
 
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
-const { pickRandom } = require("../public/whiteboard/utils");
 
 /**
  * Extracts user credentials from request headers.
@@ -34,7 +32,19 @@ function validWhiteboardName(name) {
   return name.length >= 3 && name.length <= 40;
 }
 
-exports.createWhiteboard = onRequest(async (req, res) => {
+/**
+ * Picks a random element from a list.
+ * 
+ * @template T
+ * @param {T[]} list
+ * @returns {T} A random value from the list
+ */
+function pickRandom(list) {
+    const idx = Math.floor( Math.random() * list.length );
+    return list[idx];
+}
+
+exports.createWhiteboard = onRequest({ invoker: "public" }, async (req, res) => {
     try {
         // Ensure protocol
         if (req.method !== "POST") {
@@ -70,13 +80,13 @@ exports.createWhiteboard = onRequest(async (req, res) => {
                 owner: user.uid,
                 members: [user.uid],
                 mods: [],
-                createdAt: FieldValue.serverTimestamp()
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
             });
 
             // Add whiteboard ID to user's whiteboard list
             tx.update(userRef, {
-                joinedWhiteboards: FieldValue.arrayUnion(wbRef.id),
-                updatedAt: FieldValue.serverTimestamp(),
+                joinedWhiteboards: admin.firestore.FieldValue.arrayUnion(wbRef.id),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
 
             // Create member document
@@ -92,7 +102,7 @@ exports.createWhiteboard = onRequest(async (req, res) => {
     }
 });
 
-exports.deleteWhiteboard = onRequest(async (req, res) => {
+exports.deleteWhiteboard = onRequest({ invoker: "public" }, async (req, res) => {
     try {
         // Ensure protocol
         if (req.method !== "POST") {
@@ -128,8 +138,8 @@ exports.deleteWhiteboard = onRequest(async (req, res) => {
         // Remove whiteboard ID from each member's docs
         await Promise.all(wb.members.map(async (uid) => {
             await db.doc(`users/${uid}`).update({
-                joinedWhiteboards: FieldValue.arrayRemove(whiteboardID),
-                updatedAt: FieldValue.serverTimestamp()
+                joinedWhiteboards: admin.firestore.FieldValue.arrayRemove(whiteboardID),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
             })
         }));
 
@@ -161,7 +171,7 @@ exports.deleteWhiteboard = onRequest(async (req, res) => {
     }
 });
 
-exports.leaveWhiteboard = onRequest(async (req, res) => {
+exports.leaveWhiteboard = onRequest({ invoker: "public" }, async (req, res) => {
     try {
         if (req.method !== "POST") {
             res.status(405).json({ error: "POST only" });
@@ -196,7 +206,7 @@ exports.leaveWhiteboard = onRequest(async (req, res) => {
                     const newOwner = pickRandom(wb.mods);
 
                     tx.update(wbRef, {
-                        mods: FieldValue.arrayRemove(newOwner),
+                        mods: admin.firestore.FieldValue.arrayRemove(newOwner),
                         owner: newOwner
                     });
 
@@ -220,14 +230,14 @@ exports.leaveWhiteboard = onRequest(async (req, res) => {
 
             // Remove member from whiteboard
             tx.update(wbRef, {
-                members: FieldValue.arrayRemove(user.uid),
-                mods: FieldValue.arrayRemove(user.uid),
+                members: admin.firestore.FieldValue.arrayRemove(user.uid),
+                mods: admin.firestore.FieldValue.arrayRemove(user.uid),
             });
 
             // Remove whiteboard from user's whiteboard list
             tx.update(userRef, {
-                joinedWhiteboards: FieldValue.arrayRemove(whiteboardID),
-                updatedAt: FieldValue.serverTimestamp(),
+                joinedWhiteboards: admin.firestore.FieldValue.arrayRemove(whiteboardID),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
 
             // Remove member document
@@ -240,7 +250,7 @@ exports.leaveWhiteboard = onRequest(async (req, res) => {
     }
 });
 
-exports.addUserToWhiteboard = onRequest(async (req, res) => {
+exports.addUserToWhiteboard = onRequest({ invoker: "public" }, async (req, res) => {
     try {
         // Ensure protocol
         if (req.method !== "POST") {
@@ -276,13 +286,13 @@ exports.addUserToWhiteboard = onRequest(async (req, res) => {
     
             // Add user to whiteboard
             tx.update(wbRef, {
-                members: FieldValue.arrayUnion(userID)
+                members: admin.firestore.FieldValue.arrayUnion(userID)
             });
 
             // Add whiteboard ID to user's whiteboard list
             tx.update(userRef, {
-                joinedWhiteboards: FieldValue.arrayUnion(wbRef.id),
-                updatedAt: FieldValue.serverTimestamp(),
+                joinedWhiteboards: admin.firestore.FieldValue.arrayUnion(wbRef.id),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
 
             // Add member record
@@ -298,7 +308,7 @@ exports.addUserToWhiteboard = onRequest(async (req, res) => {
     }
 });
 
-exports.setUserRole = onRequest(async (req, res) => {
+exports.setUserRole = onRequest({ invoker: "public" }, async (req, res) => {
     try {
         if (req.method !== "POST") {
             res.status(405).json({ error: "POST only" });
@@ -334,7 +344,7 @@ exports.setUserRole = onRequest(async (req, res) => {
                 if (!wb.mods.includes(userID) || role !== 'member') throw new Error("Invalid self-assignment: only moderators can demote themselves to members");
 
                 tx.update(wbRef, {
-                    mods: FieldValue.arrayRemove(userID),
+                    mods: admin.firestore.FieldValue.arrayRemove(userID),
                 });
                 tx.update(memberRef, { role });
             }
@@ -345,7 +355,7 @@ exports.setUserRole = onRequest(async (req, res) => {
 
                 // Remove user from mod list
                 tx.update(wbRef, {
-                    mods: FieldValue.arrayRemove(userID),
+                    mods: admin.firestore.FieldValue.arrayRemove(userID),
                 });
                 tx.update(memberRef, { role });
             }
@@ -355,7 +365,7 @@ exports.setUserRole = onRequest(async (req, res) => {
                 if (userID === wb.owner || wb.mods.includes(userID)) throw new Error("Promoted member must not be a mod or owner");
 
                 tx.update(wbRef, {
-                    mods: FieldValue.arrayUnion(userID),
+                    mods: admin.firestore.FieldValue.arrayUnion(userID),
                 });
                 tx.update(memberRef, { role });
             }

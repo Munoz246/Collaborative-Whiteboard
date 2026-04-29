@@ -2,9 +2,11 @@
  * Functions that access/modify data in the Firestore database.
  */
 
-import { currentUser } from "./auth.js";
-
 const db = window.firebase.firestore();
+
+function currentUser() {
+    return window.firebase.auth().currentUser;
+}
 
 async function post(path, body) {
     const user = currentUser();
@@ -18,6 +20,17 @@ async function post(path, body) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Request failed");
     return data;
+}
+
+/**
+ * Returns the user document for the given uid, or null if it doesn't exist.
+ *
+ * @param {string} uid
+ * @returns {Promise<{ username: string, joinedWhiteboards: string[], photoURL: string | null } | null>}
+ */
+export async function getUserProfile(uid) {
+    const snap = await db.collection('users').doc(uid).get();
+    return snap.exists ? snap.data() : null;
 }
 
 /**
