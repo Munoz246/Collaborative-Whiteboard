@@ -1,4 +1,4 @@
-import { buildItemPatch, fromFirestoreItem, toFirestoreItem } from "./itemModel.js";
+import { buildItemPatch, fromFirestoreItem, toFirestoreItem } from "./itemModel.js?v=shape-style-v3";
 
 const db = window.firebase.firestore();
 const { FieldValue } = window.firebase.firestore;

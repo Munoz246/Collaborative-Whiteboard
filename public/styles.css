@@ -283,6 +283,7 @@ body {
 }
 
 .hud-toolbar-pill {
+  --shape-icon-cutout-bg: rgba(255, 255, 255, 0.72);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -291,6 +292,7 @@ body {
 }
 
 .hud-tool-btn {
+  --tool-btn-bg: transparent;
   width: 48px;
   height: 48px;
   border: none;
@@ -298,18 +300,20 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  background: var(--tool-btn-bg);
   color: #111827;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .hud-tool-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  --tool-btn-bg: rgba(0, 0, 0, 0.05);
+  background: var(--tool-btn-bg);
 }
 
 .hud-tool-btn.active {
-  background: rgba(0, 0, 0, 0.88);
+  --tool-btn-bg: rgba(0, 0, 0, 0.88);
+  background: var(--tool-btn-bg);
   color: #ffffff;
 }
 
@@ -330,12 +334,53 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.hud-tool-btn--mini.shape-choice[data-shape="rectangle"] {
-  border-radius: 6px;
+.hud-tool-btn--mini.shape-choice[data-shape="rectangle"],
+.hud-tool-btn--mini.shape-choice[data-shape="circle"],
+.hud-tool-btn--mini.shape-choice[data-shape="triangle"],
+.hud-tool-btn--mini.shape-choice[data-shape="rhombus"] {
+  position: relative;
 }
 
-.hud-tool-btn--mini.shape-choice[data-shape="circle"] {
+.hud-tool-btn--mini.shape-choice[data-shape="rectangle"]::before {
+  content: "";
+  width: 16px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="circle"]::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
   border-radius: 50%;
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="triangle"]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 16px solid currentColor;
+  transform: translate(-50%, -52%);
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="triangle"]::after {
+  content: none;
+}
+
+.hud-tool-btn--mini.shape-choice[data-shape="rhombus"]::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  transform: rotate(45deg);
+  border-radius: 2px;
 }
 
 .hud-tool-btn--danger {
@@ -354,6 +399,56 @@ body {
   margin-left: 4px;
   padding-left: 8px;
   border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.hud-shape-style-controls {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.hud-style-control {
+  display: inline-flex;
+  align-items: center;
+}
+
+.hud-style-control input[type="color"] {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(17, 24, 39, 0.2);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.hud-style-control input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.hud-style-control input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.hud-style-control--stroke {
+  gap: 4px;
+  min-width: 78px;
+}
+
+.hud-style-control--stroke input[type="range"] {
+  width: 58px;
+}
+
+.hud-style-control--stroke output {
+  min-width: 14px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #374151;
+  text-align: right;
 }
 
 /* ---- Floating panels ---- */
@@ -602,6 +697,144 @@ body {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+}
+
+/* -- In-canvas file viewers -- */
+.wb-file-viewer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+}
+
+.wb-file-viewer {
+  position: absolute;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.25);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.wb-file-viewer__header {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.12);
+  background: rgba(243, 244, 246, 0.94);
+  pointer-events: none;
+}
+
+.wb-file-viewer__title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-file-viewer__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  pointer-events: auto;
+}
+
+.wb-file-viewer__btn {
+  border: 1px solid rgba(17, 24, 39, 0.2);
+  border-radius: 7px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 5px 7px;
+}
+
+.wb-file-viewer__btn:disabled {
+  opacity: 0.45;
+}
+
+.wb-file-viewer__page {
+  font-size: 0.72rem;
+  color: #374151;
+  min-width: 76px;
+  text-align: center;
+}
+
+.wb-file-viewer__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.wb-file-viewer__status {
+  min-height: 20px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  color: #6b7280;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.wb-file-viewer__content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+  pointer-events: auto;
+}
+
+.wb-file-viewer__text {
+  margin: 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.wb-file-viewer__pdf-page {
+  position: relative;
+  margin: 0 auto;
+  background: #fff;
+}
+
+.wb-file-viewer__pdf-canvas {
+  display: block;
+}
+
+.wb-file-viewer__pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  user-select: text;
+}
+
+.wb-file-viewer__frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.wb-file-viewer.is-minimized {
+  height: auto !important;
+}
+
+.wb-file-viewer.is-minimized .wb-file-viewer__body {
+  display: none;
 }
 
 /* Override legacy sidebar chat/board list styles inside HUD panels */

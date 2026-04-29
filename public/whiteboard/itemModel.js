@@ -13,7 +13,32 @@ function isEqual(a, b) {
   return stableStringify(a) === stableStringify(b);
 }
 
+const SHAPE_KINDS = new Set(["rectangle", "circle", "triangle", "rhombus"]);
+
+function isShapeType(type) {
+  return SHAPE_KINDS.has(type);
+}
+
+function normalizeShapeKind(kind, fallback = "rectangle") {
+  if (typeof kind !== "string") return fallback;
+  return SHAPE_KINDS.has(kind) ? kind : fallback;
+}
+
 function pickTypeData(localItem) {
+  if (isShapeType(localItem.type)) {
+    const shapeKind = normalizeShapeKind(localItem.content?.shapeKind ?? localItem.type);
+    return {
+      shape: {
+        shapeKind,
+        // Keep legacy shapeType for backward compatibility.
+        shapeType: shapeKind,
+        fill: localItem.style?.fill ?? "rgba(37, 99, 235, 0.35)",
+        stroke: localItem.style?.stroke ?? "#2563eb",
+        strokeWidth: localItem.style?.strokeWidth ?? 2,
+      },
+    };
+  }
+
   if (localItem.type === "path") {
     return {
       drawing: {
@@ -39,21 +64,23 @@ function pickTypeData(localItem) {
   if (localItem.type === "file") {
     return {
       file: {
-        documentId: localItem.content?.documentId ?? "",
+        fileId: localItem.content?.fileId ?? localItem.content?.documentId ?? "",
+        documentId: localItem.content?.documentId ?? localItem.content?.fileId ?? "",
+        storagePath: localItem.content?.storagePath ?? "",
         fileName: localItem.content?.fileName ?? "",
-        fileType: localItem.content?.fileType ?? "",
+        fileType: localItem.content?.fileType ?? localItem.content?.mimeType ?? "",
+        mimeType: localItem.content?.mimeType ?? localItem.content?.fileType ?? "",
+        fileSize: localItem.content?.fileSize ?? 0,
+        viewerKind: localItem.content?.viewerKind ?? "unsupported",
+        currentPage: localItem.content?.currentPage ?? 1,
+        totalPages: localItem.content?.totalPages ?? 1,
+        zoomLevel: localItem.content?.zoomLevel ?? 1,
+        minimized: !!localItem.content?.minimized,
       },
     };
   }
 
-  return {
-    shape: {
-      shapeType: localItem.type === "circle" ? "circle" : "rectangle",
-      fill: localItem.style?.fill ?? "rgba(37, 99, 235, 0.35)",
-      stroke: localItem.style?.stroke ?? "#2563eb",
-      strokeWidth: localItem.style?.strokeWidth ?? 2,
-    },
-  };
+  return { other: {} };
 }
 
 export function toFirestoreItem(localItem, userId, timestampValue) {
@@ -66,7 +93,7 @@ export function toFirestoreItem(localItem, userId, timestampValue) {
     rotation: localItem.rotation ?? 0,
   };
 
-  return {
+  const payload = {
     type: localItem.type ?? "rectangle",
     transform,
     isLocked: !!localItem.isLocked,
@@ -76,6 +103,7 @@ export function toFirestoreItem(localItem, userId, timestampValue) {
     createdBy: userId,
     updatedBy: userId,
   };
+  return payload;
 }
 
 export function fromFirestoreItem(doc) {
@@ -93,12 +121,14 @@ export function fromFirestoreItem(doc) {
   let content = {};
 
   if (shapeData) {
-    type = shapeData.shapeType === "circle" ? "circle" : "rectangle";
+    const resolvedShapeKind = normalizeShapeKind(shapeData.shapeKind ?? shapeData.shapeType ?? data.type);
+    type = resolvedShapeKind;
     style = {
       fill: shapeData.fill ?? "rgba(37, 99, 235, 0.35)",
       stroke: shapeData.stroke ?? "#2563eb",
       strokeWidth: shapeData.strokeWidth ?? 2,
     };
+    content = { shapeKind: resolvedShapeKind };
   } else if (drawingData) {
     type = "path";
     style = {
@@ -119,14 +149,31 @@ export function fromFirestoreItem(doc) {
     };
     content = { text: noteData.text ?? "" };
   } else if (fileData) {
-    // Render files as text placeholders until dedicated file UI is implemented.
-    type = "text";
-    style = {
-      fill: "#111827",
-      fontSize: 16,
-      textAlign: "left",
+    type = "file";
+    style = {};
+    content = {
+      fileId: fileData.fileId ?? fileData.documentId ?? "",
+      documentId: fileData.documentId ?? fileData.fileId ?? "",
+      storagePath: fileData.storagePath ?? "",
+      fileName: fileData.fileName ?? "Untitled file",
+      fileType: fileData.fileType ?? fileData.mimeType ?? "",
+      mimeType: fileData.mimeType ?? fileData.fileType ?? "",
+      fileSize: fileData.fileSize ?? 0,
+      viewerKind: fileData.viewerKind ?? "unsupported",
+      currentPage: fileData.currentPage ?? 1,
+      totalPages: fileData.totalPages ?? 1,
+      zoomLevel: fileData.zoomLevel ?? 1,
+      minimized: !!fileData.minimized,
     };
-    content = { text: fileData.fileName ? `[File] ${fileData.fileName}` : "[File]" };
+  } else if (isShapeType(data.type)) {
+    const fallbackKind = normalizeShapeKind(data.type);
+    type = fallbackKind;
+    style = {
+      fill: "rgba(37, 99, 235, 0.35)",
+      stroke: "#2563eb",
+      strokeWidth: 2,
+    };
+    content = { shapeKind: fallbackKind };
   }
 
   return {

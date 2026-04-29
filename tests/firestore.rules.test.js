@@ -67,9 +67,16 @@ const baseBoard = {
 const baseItem = {
   createdBy: 'alice',
   updatedBy: 'alice',
-  type: 'rect',
-  transform: { x: 0, y: 0 },
-  data: { color: 'red' },
+  type: 'rectangle',
+  transform: { x: 0, y: 0, width: 120, height: 80, rotation: 0 },
+  data: {
+    shape: {
+      shapeKind: 'rectangle',
+      fill: '#2563eb',
+      stroke: '#ef4444',
+      strokeWidth: 4,
+    },
+  },
   isLocked: false,
 };
 
@@ -279,6 +286,83 @@ describe('items subcollection', () => {
     );
   });
 
+  it('member can create a triangle item with shape style data', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(db('charlie'), `whiteboards/${BOARD_ID}/items/triangle-1`),
+        {
+          ...baseItem,
+          createdBy: 'charlie',
+          updatedBy: 'charlie',
+          type: 'triangle',
+          data: {
+            shape: {
+              shapeKind: 'triangle',
+              fill: '#f59e0b',
+              stroke: '#111827',
+              strokeWidth: 3,
+            },
+          },
+        },
+      ),
+    );
+  });
+
+  it('rejects shape create with unsupported shape kind', async () => {
+    await assertFails(
+      setDoc(
+        doc(db('charlie'), `whiteboards/${BOARD_ID}/items/bad-shape`),
+        {
+          ...baseItem,
+          createdBy: 'charlie',
+          updatedBy: 'charlie',
+          type: 'triangle',
+          data: {
+            shape: {
+              shapeKind: 'star',
+              fill: '#f59e0b',
+              stroke: '#111827',
+              strokeWidth: 3,
+            },
+          },
+        },
+      ),
+    );
+  });
+
+  it('rejects shape update with invalid stroke width', async () => {
+    await seedItem('item-1', {
+      ...baseItem,
+      createdBy: 'charlie',
+      updatedBy: 'charlie',
+      type: 'rhombus',
+      data: {
+        shape: {
+          shapeKind: 'rhombus',
+          fill: '#22c55e',
+          stroke: '#111827',
+          strokeWidth: 2,
+        },
+      },
+    });
+    await assertFails(
+      updateDoc(
+        doc(db('charlie'), `whiteboards/${BOARD_ID}/items/item-1`),
+        {
+          updatedBy: 'charlie',
+          data: {
+            shape: {
+              shapeKind: 'rhombus',
+              fill: '#22c55e',
+              stroke: '#111827',
+              strokeWidth: -2,
+            },
+          },
+        },
+      ),
+    );
+  });
+
   it('locked item cannot be updated by a non-locker member', async () => {
     await seedItem('locked-item', {
       ...baseItem,
@@ -305,6 +389,90 @@ describe('items subcollection', () => {
         { updatedBy: 'alice' },
       ),
     );
+  });
+
+  it('member can create a file item with viewer metadata', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(db('charlie'), `whiteboards/${BOARD_ID}/items/file-1`),
+        {
+          ...baseItem,
+          createdBy: 'charlie',
+          updatedBy: 'charlie',
+          type: 'file',
+          data: {
+            file: {
+              fileId: 'file-doc-1',
+              documentId: 'file-doc-1',
+              storagePath: `whiteboards/${BOARD_ID}/files/file-doc-1-report.pdf`,
+              fileName: 'report.pdf',
+              fileType: 'application/pdf',
+              mimeType: 'application/pdf',
+              fileSize: 1024,
+              viewerKind: 'pdf',
+              currentPage: 1,
+              totalPages: 5,
+              zoomLevel: 1.2,
+              minimized: false,
+            },
+          },
+        },
+      ),
+    );
+  });
+
+  it('rejects file item with unsupported viewer kind', async () => {
+    await assertFails(
+      setDoc(
+        doc(db('charlie'), `whiteboards/${BOARD_ID}/items/file-bad`),
+        {
+          ...baseItem,
+          createdBy: 'charlie',
+          updatedBy: 'charlie',
+          type: 'file',
+          data: {
+            file: {
+              fileId: 'file-doc-1',
+              fileName: 'report.pdf',
+              fileType: 'application/pdf',
+              viewerKind: 'video',
+              currentPage: 1,
+              totalPages: 5,
+              zoomLevel: 1,
+              minimized: false,
+            },
+          },
+        },
+      ),
+    );
+  });
+});
+
+describe('files subcollection', () => {
+  beforeEach(async () => {
+    await seedBoard(baseBoard);
+  });
+
+  it('member can create and read file metadata', async () => {
+    const ref = doc(db('charlie'), `whiteboards/${BOARD_ID}/files/file-1`);
+    await assertSucceeds(setDoc(ref, {
+      name: 'notes.txt',
+      storagePath: `whiteboards/${BOARD_ID}/files/file-1-notes.txt`,
+      size: 10,
+      type: 'text/plain',
+      extension: '.txt',
+      uploadedBy: 'charlie',
+    }));
+    await assertSucceeds(getDoc(ref));
+  });
+
+  it('non-member cannot read file metadata', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `whiteboards/${BOARD_ID}/files/file-1`), {
+        name: 'notes.txt',
+      });
+    });
+    await assertFails(getDoc(doc(db('stranger'), `whiteboards/${BOARD_ID}/files/file-1`)));
   });
 });
 

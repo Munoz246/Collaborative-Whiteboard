@@ -6,8 +6,8 @@
  * InteractionController, keeps the canvas sized to the viewport, and starts listening for input.
  */
 import { ElementStore } from "./elementStore.js";
-import { FabricRenderer } from "./fabricRenderer.js";
-import { InteractionController } from "./interactionController.js";
+import { FabricRenderer } from "./fabricRenderer.js?v=shape-style-v3";
+import { InteractionController } from "./interactionController.js?v=shape-style-v3";
 
 export class WhiteboardModule {
   /**
@@ -44,7 +44,6 @@ export class WhiteboardModule {
       );
     }
     if (!this.canvasEl) throw new Error("Missing canvas element for WhiteboardModule.");
-
     this.canvas = new fabric.Canvas(this.canvasEl, {
       preserveObjectStacking: true,
       selection: true,
@@ -60,7 +59,11 @@ export class WhiteboardModule {
     this.resizeObserver.observe(this.canvasEl);
     window.addEventListener("resize", this._onWindowResize);
 
-    this.controller.init();
+    try {
+      this.controller.init();
+    } catch (err) {
+      throw err;
+    }
     this.isInitialized = true;
   }
 
