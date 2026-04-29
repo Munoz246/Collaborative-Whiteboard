@@ -44,6 +44,69 @@
         }
       },
       {
+        "source": "/api/initializeUser",
+        "function": {
+          "functionId": "initializeUser",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/setUsername",
+        "function": {
+          "functionId": "setUsername",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/checkUsername",
+        "function": {
+          "functionId": "checkUsername",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/getProfile",
+        "function": {
+          "functionId": "getProfile",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/createWhiteboard",
+        "function": {
+          "functionId": "createWhiteboard",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/deleteWhiteboard",
+        "function": {
+          "functionId": "deleteWhiteboard",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/leaveWhiteboard",
+        "function": {
+          "functionId": "leaveWhiteboard",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/addUserToWhiteboard",
+        "function": {
+          "functionId": "addUserToWhiteboard",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/setUserRole",
+        "function": {
+          "functionId": "setUserRole",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
